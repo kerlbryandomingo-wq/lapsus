@@ -104,8 +104,8 @@ export function createHandlers(d: Deps): Handlers {
       publishAi();
     },
     'ai:status': () => d.ai.status(),
-    'ai:set-key': ({ provider, key }) => {
-      d.secrets.set(provider, key.trim());
+    'ai:set-key': async ({ provider, key }) => {
+      await d.secrets.set(provider, key.trim());
       const status = d.ai.status();
       win.emit({ type: 'ai', ai: status });
       return status;

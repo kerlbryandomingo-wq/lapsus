@@ -1,3 +1,6 @@
+const cc = (code: number) => String.fromCharCode(code);
+const BIDI_CHARS = new RegExp(`[${cc(0x202a)}-${cc(0x202e)}${cc(0x2066)}-${cc(0x2069)}${cc(0x200e)}${cc(0x200f)}]`, 'g');
+
 /** File types that can run code when opened on Windows. Downloads of these get an extra warning. */
 const DANGEROUS_EXTENSIONS = new Set([
   'exe', 'msi', 'msix', 'msp', 'appx', 'appxbundle', 'bat', 'cmd', 'com', 'cpl', 'scr', 'pif',
@@ -23,7 +26,7 @@ export function sanitizeFilename(raw: string): string {
   let name = (raw.split(/[\\/]/).pop() ?? '')
     // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f<>:"|?*]/g, '_')
-    .replace(/[‪-‮⁦-⁩‎‏]/g, '') // bidi overrides used to disguise extensions
+    .replace(BIDI_CHARS, '') // bidi overrides can disguise a file extension
     .replace(/^[.\s]+|[.\s]+$/g, '')
     .trim();
   if (!name || RESERVED_WINDOWS_NAMES.test(name)) name = `download${name ? `_${name}` : ''}`;

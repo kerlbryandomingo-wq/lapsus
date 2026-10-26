@@ -73,7 +73,7 @@ export class AIService {
 
     let apiKey = '';
     if (provider !== 'demo') {
-      apiKey = this.secrets.get(provider) ?? '';
+      apiKey = (await this.secrets.get(provider)) ?? '';
       if (!apiKey) return { ok: false, code: 'not-configured', error: this.status().message };
       if (!this.usage.canSpend(settings.aiMonthlyRequestLimit)) {
         return { ok: false, code: 'limit', error: 'Monthly request limit reached. Raise it in Settings to continue.' };
@@ -113,7 +113,7 @@ export class AIService {
     const provider = settings.aiProvider;
     if (provider === 'none') return { ok: false, message: 'Choose a provider first.' };
     if (provider === 'demo') return { ok: true, message: 'Demo mode works offline.' };
-    const key = this.secrets.get(provider);
+    const key = await this.secrets.get(provider);
     if (!key) return { ok: false, message: 'No API key saved for this provider.' };
     try {
       await this.providers[provider].test(key, this.modelFor(settings) ?? '', new AbortController().signal);

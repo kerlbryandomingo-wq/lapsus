@@ -10,8 +10,8 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "electron.vite.config.ts",
-    "vitest.config.ts",
+    "vitest.config.mts",
     "playwright.config.ts",
-    "tests/**/*"
+    "tests/**/*.ts"
   ]
 }

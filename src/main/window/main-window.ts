@@ -341,6 +341,9 @@ export class MainWindow {
       this.command({ type: 'notice', level: 'warning', message: 'The page is not responding. You can wait or reload it.' }),
     );
 
+    wc.on('found-in-page', (_e, result) => {
+      this.emit({ type: 'find', find: { active: this.findActive, matches: result.matches, activeMatch: result.activeMatchOrdinal } });
+    });
     wc.on('enter-html-full-screen', () => {
       this.state.pageFullscreen = true;
       this.fullscreenHintUntil = Date.now() + FULLSCREEN_HINT_MS;

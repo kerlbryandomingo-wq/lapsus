@@ -36,16 +36,7 @@ export function AssistantPanel() {
     textarea.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (state.askSelectionToken > 0) void useSelection();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.askSelectionToken]);
-
-  useEffect(() => {
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' });
-  }, [entries.length, busy]);
-
-  const useSelection = async () => {
+  const pullSelection = async () => {
     const res = await api.invoke('ai:get-selection');
     if (res.reason === 'password') {
       dispatch({ type: 'notice', notice: { level: 'warning', message: 'Lapsus never reads password fields.' } });
@@ -59,6 +50,15 @@ export function AssistantPanel() {
     setReview(null);
     textarea.current?.focus();
   };
+
+  useEffect(() => {
+    if (state.askSelectionToken > 0) void pullSelection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.askSelectionToken]);
+
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' });
+  }, [entries.length, busy]);
 
   const startReview = async () => {
     const prepared = await api.invoke('ai:prepare', { material });
@@ -240,7 +240,7 @@ export function AssistantPanel() {
                 maxLength={500}
               />
               <div className="composer__actions">
-                <Button variant="secondary" icon={<TextSelect size={15} />} onClick={() => void useSelection()}>
+                <Button variant="secondary" icon={<TextSelect size={15} />} onClick={() => void pullSelection()}>
                   Use selected text
                 </Button>
                 <Button variant="primary" onClick={() => void startReview()} disabled={!material.trim()}>

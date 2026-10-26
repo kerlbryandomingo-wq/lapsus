@@ -55,6 +55,7 @@ async function start(): Promise<void> {
   const history = new HistoryStore(dataDir);
   const sessionStore = new SessionStore(dataDir);
   const secrets = new SecretStore(dataDir);
+  await secrets.init();
   const usage = new UsageStore(dataDir);
   const ai = new AIService(secrets, usage, () => settings.get());
 

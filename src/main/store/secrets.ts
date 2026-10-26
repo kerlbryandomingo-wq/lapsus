@@ -8,11 +8,12 @@ type SecretFile = Partial<Record<SecretName, string>>;
 /**
  * API keys encrypted with the operating system's credential protection
  * (DPAPI on Windows, via Electron safeStorage). Keys are never written in plain text:
- * if encryption is unavailable, storing is refused. Decrypted keys stay in the main process.
+ * if real encryption is unavailable, storing is refused. Decrypted keys stay in the main process.
  */
 export class SecretStore {
   private file: JsonFile<SecretFile>;
   private data: SecretFile;
+  private available = false;
 
   constructor(dir: string) {
     this.file = new JsonFile(join(dir, 'secrets.json'), 0);
@@ -31,28 +32,43 @@ export class SecretStore {
     );
   }
 
+  /** Must be awaited once after app ready. */
+  async init(): Promise<void> {
+    try {
+      const ok = await safeStorage.isAsyncEncryptionAvailable();
+      // On Linux without a keyring, Chromium falls back to a fixed key, which is not real protection.
+      const weak = process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text';
+      this.available = ok && !weak;
+    } catch {
+      this.available = false;
+    }
+  }
+
   get encryptionAvailable(): boolean {
-    return safeStorage.isEncryptionAvailable();
+    return this.available;
   }
 
   has(name: SecretName): boolean {
     return typeof this.data[name] === 'string';
   }
 
-  set(name: SecretName, value: string): void {
-    if (!this.encryptionAvailable) {
+  async set(name: SecretName, value: string): Promise<void> {
+    if (!this.available) {
       throw new Error('Secure storage is not available on this system, so the key was not saved.');
     }
-    this.data[name] = safeStorage.encryptString(value).toString('base64');
+    const encrypted = await safeStorage.encryptStringAsync(value);
+    this.data[name] = encrypted.toString('base64');
     this.file.write(this.data);
     this.file.flush();
   }
 
-  get(name: SecretName): string | null {
+  async get(name: SecretName): Promise<string | null> {
     const enc = this.data[name];
-    if (!enc || !this.encryptionAvailable) return null;
+    if (!enc || !this.available) return null;
     try {
-      return safeStorage.decryptString(Buffer.from(enc, 'base64'));
+      const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(Buffer.from(enc, 'base64'));
+      if (shouldReEncrypt) await this.set(name, result);
+      return result;
     } catch {
       return null;
     }

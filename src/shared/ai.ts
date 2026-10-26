@@ -56,7 +56,12 @@ Rules:
 - Write plain text. Short paragraphs and simple "- " bullet lines are allowed. No HTML.
 - Respond only with JSON matching the required schema.`;
 
-const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F​-‏‪-‮⁦-⁩]/g;
+const cc = (code: number) => String.fromCharCode(code);
+/** C0 controls, DEL, zero-width characters and bidi overrides (used to hide or reorder text). */
+const CONTROL_CHARS = new RegExp(
+  `[${cc(0x00)}-${cc(0x08)}${cc(0x0b)}${cc(0x0c)}${cc(0x0e)}-${cc(0x1f)}${cc(0x7f)}${cc(0x200b)}-${cc(0x200f)}${cc(0x202a)}-${cc(0x202e)}${cc(0x2066)}-${cc(0x2069)}]`,
+  'g',
+);
 
 export interface PreparedInput {
   text: string;
