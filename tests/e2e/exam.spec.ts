@@ -117,7 +117,7 @@ test('FS-05 F11 hides Lapsus chrome so the page fills the screen, and restores i
     sh: screen.height,
   }));
   expect(size.w).toBe(size.sw);
-  expect(size.sh - size.h).toBeLessThanOrEqual(8);
+  expect(size.h).toBe(size.sh);
   // Esc goes to the page in F11 mode (as in Chrome) and does not leave fullscreen.
   await pressKey(l, 'page', 'Escape');
   await page.waitForTimeout(300);

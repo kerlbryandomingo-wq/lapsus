@@ -54,6 +54,11 @@ export function App() {
     if (!immersive) setRevealed(false);
   }, [immersive]);
 
+  useEffect(() => {
+    if (immersive && state.revealToken > 0) setRevealed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.revealToken]);
+
   // Ctrl+L in an immersive layout shows the controls so the address bar can take focus.
   useEffect(() => {
     if (immersive && state.addressFocusToken > 0) setRevealed(true);

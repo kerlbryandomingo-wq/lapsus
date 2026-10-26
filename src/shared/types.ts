@@ -126,6 +126,8 @@ export interface Snapshot {
 
 export type AppCommand =
   | { type: 'toggle-ai' }
+  /** The pointer reached the top edge of a full-height page: show the hidden Lapsus controls. */
+  | { type: 'reveal-chrome' }
   | { type: 'ask-selection' }
   | { type: 'focus-address' }
   | { type: 'open-find' }

@@ -98,6 +98,24 @@ app.on('ready', async () => {
       "window.lapsus.invoke('state:get').then(s => s.nav.error && s.nav.error.kind)",
     );
     result.crash = { errorAfterCrash, recovered, errorAfterReload };
+    // Control: does a plain Electron window (not Lapsus) change size the same way when it is
+    // fullscreen and another window takes focus? Reported for information only.
+    if (main.isFullScreen()) {
+      const control = new BrowserWindow({ show: true });
+      await control.loadURL('data:text/html,control');
+      control.setFullScreen(true);
+      control.focus();
+      await wait(1500);
+      const before = control.getBounds();
+      const other2 = new BrowserWindow({ width: 400, height: 300, show: true });
+      await other2.loadURL('data:text/html,other app');
+      other2.focus();
+      await wait(1000);
+      const after = control.getBounds();
+      other2.destroy();
+      control.destroy();
+      result.control = { before, after };
+    }
   } catch (err) {
     result.error = String(err && err.stack ? err.stack : err);
   }

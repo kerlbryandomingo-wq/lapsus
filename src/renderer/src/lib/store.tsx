@@ -36,6 +36,8 @@ export interface UIState {
   notice: Notice | null;
   /** Bumped to ask the address bar to take focus. */
   addressFocusToken: number;
+  /** Bumped when the pointer reaches the top edge of the page in an immersive layout. */
+  revealToken: number;
   /** Bumped when the student asked the assistant about a page selection. */
   askSelectionToken: number;
 }
@@ -64,6 +66,7 @@ const initial: UIState = {
   siteInfoOpen: false,
   notice: null,
   addressFocusToken: 0,
+  revealToken: 0,
   askSelectionToken: 0,
 };
 
@@ -127,6 +130,8 @@ function reducer(state: UIState, action: Action): UIState {
               };
             case 'focus-address':
               return { ...state, addressFocusToken: state.addressFocusToken + 1 };
+            case 'reveal-chrome':
+              return { ...state, revealToken: state.revealToken + 1 };
             case 'open-find':
               return { ...state, findOpen: true, page: 'portal' };
             case 'close-overlays':

@@ -39,7 +39,7 @@ test('WM-01 by default Lapsus opens in genuine OS fullscreen with its controls h
     apiFullscreen: !!document.fullscreenElement,
   }));
   expect(s.w).toBe(s.sw);
-  expect(s.sh - s.h).toBeLessThanOrEqual(8);
+  expect(s.h).toBe(s.sh);
   // Honest reporting: the window is fullscreen, but the page has not entered Fullscreen API mode.
   expect(s.apiFullscreen).toBe(false);
   // The hidden controls come back on hover, including the window buttons.
@@ -105,22 +105,23 @@ test('NW-01 in "open in this window" mode a target=_blank link loads in the main
 test('NW-02 in "open in this window" mode window.open loads in the main window and returns null', async () => {
   l = await launch({ windowMode: 'maximized', newWindows: 'same-window' });
   const page = await openExam(l);
-  const opened = page.evaluate(
-    () =>
-      new Promise<boolean>((resolve) => {
-        document
-          .getElementById('open-btn')!
-          .addEventListener('click', () => resolve(false), { once: true });
-        const original = window.open;
-        window.open = (...args) => {
-          const w = original.apply(window, args);
-          resolve(!!w);
-          return w;
-        };
-      }),
+  // The page navigates away right after window.open returns, so report the result through a
+  // console message (delivered immediately) rather than a promise the navigation would cut off.
+  const opened = new Promise<string>((resolve) =>
+    page.on('console', (m) => {
+      if (m.text().startsWith('open-result:')) resolve(m.text());
+    }),
   );
+  await page.evaluate(() => {
+    const original = window.open;
+    window.open = (...args) => {
+      const w = original.apply(window, args);
+      console.log(`open-result:${!!w}`);
+      return w;
+    };
+  });
   await page.click('#open-btn');
-  expect(await opened).toBe(false);
+  expect(await opened).toBe('open-result:false');
   await waitForWindow(l.app, (u) => u.endsWith('/popup'));
   expect((await windowState(l)).popups).toBe(0);
 });
@@ -133,4 +134,17 @@ test('NW-03 in "open in this window" mode an unrequested pop-up is still blocked
     .toBe(false);
   await expect(l.ui.locator('.band')).toContainText('blocked a pop-up');
   expect(page.url()).toContain('/exam');
+});
+
+test('WM-05 moving the pointer to the top edge of the page shows the hidden controls', async () => {
+  l = await launch({});
+  await expect.poll(async () => (await windowState(l!)).fullscreen).toBe(true);
+  await openExam(l);
+  await expect(l.ui.locator('.titlebar')).toHaveCount(0);
+  await l.app.evaluate(({ webContents }) => {
+    const wc = webContents.getAllWebContents().find((w) => w.getURL().includes('/exam'))!;
+    wc.sendInputEvent({ type: 'mouseMove', x: 400, y: 200 });
+    wc.sendInputEvent({ type: 'mouseMove', x: 400, y: 0 });
+  });
+  await expect(l.ui.locator('.titlebar')).toBeVisible();
 });

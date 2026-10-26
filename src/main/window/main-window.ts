@@ -373,6 +373,7 @@ export class MainWindow {
     wc.setWindowOpenHandler((details) => this.handleWindowOpen(details.url, wc));
     wc.on('did-create-window', (child) => this.adoptPopup(child));
     this.trackActivation(wc);
+    this.watchTopEdge(wc);
     wc.on('before-input-event', (event, input) => this.onInput(event, input, 'page'));
     wc.on('context-menu', (_event, params) => this.showContextMenu(wc, params));
 
@@ -477,6 +478,24 @@ export class MainWindow {
       if (activates) this.lastActivation.set(id, Date.now());
     });
     wc.once('destroyed', () => this.lastActivation.delete(id));
+  }
+
+  /**
+   * In focus mode or F11 fullscreen the page fills the whole window, covering the UI's reveal
+   * strip. Moving the pointer to the very top edge of the page shows the Lapsus controls again.
+   */
+  private watchTopEdge(wc: WebContents): void {
+    let lastReveal = 0;
+    wc.on('input-event', (_event, input) => {
+      if (input.type !== 'mouseMove') return;
+      const y = (input as { y?: number }).y;
+      if (y === undefined || y > 1) return;
+      const immersive =
+        this.state.focusMode || (this.window.isFullScreen() && !this.state.pageFullscreen);
+      if (!immersive || Date.now() - lastReveal < 500) return;
+      lastReveal = Date.now();
+      this.command({ type: 'reveal-chrome' });
+    });
   }
 
   /** True once per click or key press, like Chromium's transient user activation. */

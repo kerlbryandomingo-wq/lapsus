@@ -47,6 +47,12 @@ for (const mode of ['maximized', 'fullscreen']) {
         ` [window ${s.bounds.width}x${s.bounds.height}${s.fullscreen ? ', fullscreen' : ''}]`,
     );
   }
+  if (result.control) {
+    const { before, after } = result.control;
+    console.log(
+      `INFO plain Electron fullscreen window: ${before.width}x${before.height} focused, ${after.width}x${after.height} after another window took focus`,
+    );
+  }
   const tag = mode === 'fullscreen' ? 'WIN-02F' : 'WIN-02';
   const checks = [
     [

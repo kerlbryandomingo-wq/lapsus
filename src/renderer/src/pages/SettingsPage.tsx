@@ -228,7 +228,9 @@ export function SettingsPage() {
               onChange={(e) => set('newWindows')(e.target.value as Settings['newWindows'])}
             >
               <option value="popup">Open in a pop-up window</option>
-              <option value="same-window">Open in this window (sign-in pop-ups may not work)</option>
+              <option value="same-window">
+                Open in this window (sign-in pop-ups may not work)
+              </option>
             </select>
           </Field>
           <Switch
