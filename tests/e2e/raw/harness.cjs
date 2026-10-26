@@ -23,9 +23,15 @@ app.on('ready', async () => {
     const main = BaseWindow.getAllWindows().find((w) => !(w instanceof BrowserWindow));
     const take = async (name) => {
       const events = await page.executeJavaScript(
-        'JSON.stringify(window.__probe.splice(0).map(e => ({ type: e.type, vis: e.vis, focus: e.focus })))',
+        'JSON.stringify(window.__probe.splice(0).map(e => ({ type: e.type, vis: e.vis, focus: e.focus, w: e.w, h: e.h })))',
       );
-      result.steps.push({ name, minimized: main.isMinimized(), events: JSON.parse(events) });
+      result.steps.push({
+        name,
+        minimized: main.isMinimized(),
+        fullscreen: main.isFullScreen(),
+        bounds: main.getBounds(),
+        events: JSON.parse(events),
+      });
     };
     main.focus();
     page.focus();

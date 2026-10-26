@@ -39,8 +39,14 @@ for (const mode of ['maximized', 'fullscreen']) {
   const types = (n) =>
     step(n).events.map((e) => (e.type === 'visibilitychange' ? `visibility:${e.vis}` : e.type));
   console.log(`[${mode} start]`);
-  for (const s of result.steps)
-    console.log(`  ${s.name}: ${types(s.name).join(', ') || '(no events)'}`);
+  for (const s of result.steps) {
+    const sizes = s.events.filter((e) => e.type === 'resize').map((e) => `${e.w}x${e.h}`);
+    console.log(
+      `  ${s.name}: ${types(s.name).join(', ') || '(no events)'}` +
+        (sizes.length ? ` [page ${sizes.join(' -> ')}]` : '') +
+        ` [window ${s.bounds.width}x${s.bounds.height}${s.fullscreen ? ', fullscreen' : ''}]`,
+    );
+  }
   const tag = mode === 'fullscreen' ? 'WIN-02F' : 'WIN-02';
   const checks = [
     [
