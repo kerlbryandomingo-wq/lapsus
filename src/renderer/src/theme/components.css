@@ -39,24 +39,18 @@
   opacity: 1;
 }
 
-.fullscreen-hint {
-  position: fixed;
-  inset: 0 0 auto 0;
-  height: 36px;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  background: #111;
-  color: #fff;
-  font-size: var(--text-sm);
+.band__action {
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
 }
-.fullscreen-hint kbd {
-  border: 1px solid #666;
-  border-radius: 4px;
-  padding: 0 6px;
-  font-family: var(--font-sans);
+.band__action:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 /* ---------- Title bar ---------- */

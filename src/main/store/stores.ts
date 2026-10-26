@@ -91,7 +91,13 @@ export class BookmarkStore {
     if (!safe) throw new Error('Only web pages can be bookmarked');
     const existing = this.findByUrl(safe);
     if (existing) return existing;
-    const bookmark = { id: newId(), url: safe, title: title.trim() || safe, folder: folder.trim(), createdAt: Date.now() };
+    const bookmark = {
+      id: newId(),
+      url: safe,
+      title: title.trim() || safe,
+      folder: folder.trim(),
+      createdAt: Date.now(),
+    };
     this.items = [bookmark, ...this.items].slice(0, 2000);
     this.file.write(this.items);
     return bookmark;
@@ -129,7 +135,14 @@ export class HistoryStore {
           ? raw.flatMap((r) => {
               const url = safeHttpUrl(r.url);
               if (!url || typeof r.id !== 'string') return [];
-              return [{ id: r.id, url, title: String(r.title ?? '').slice(0, 300), visitedAt: Number(r.visitedAt) || 0 }];
+              return [
+                {
+                  id: r.id,
+                  url,
+                  title: String(r.title ?? '').slice(0, 300),
+                  visitedAt: Number(r.visitedAt) || 0,
+                },
+              ];
             })
           : [],
     );
@@ -162,7 +175,9 @@ export class HistoryStore {
   list(query: string, limit: number): HistoryEntry[] {
     const q = query.trim().toLowerCase();
     const filtered = q
-      ? this.items.filter((e) => e.url.toLowerCase().includes(q) || e.title.toLowerCase().includes(q))
+      ? this.items.filter(
+          (e) => e.url.toLowerCase().includes(q) || e.title.toLowerCase().includes(q),
+        )
       : this.items;
     return filtered.slice(0, limit);
   }

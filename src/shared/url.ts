@@ -93,7 +93,9 @@ export function evaluateNavigation(rawUrl: string, ctx: NavigationContext): Navi
       return { action: 'allow' };
     }
     case 'about:':
-      return url.href === 'about:blank' ? { action: 'allow' } : { action: 'block', reason: 'scheme' };
+      return url.href === 'about:blank'
+        ? { action: 'allow' }
+        : { action: 'block', reason: 'scheme' };
     case 'mailto:':
     case 'tel:':
       return { action: 'external', url: url.toString() };

@@ -38,18 +38,27 @@ export function App() {
   const { state } = useStore();
   const narrow = useNarrow();
   const focusMode = state.window?.focusMode ?? false;
-  const pageFullscreen = state.window?.pageFullscreen ?? false;
+  // F11 fullscreen hides Lapsus chrome like focus mode, so the page really gets the whole screen.
+  const windowFullscreen =
+    (state.window?.fullscreen ?? false) && !(state.window?.pageFullscreen ?? false);
+  const immersive = focusMode || windowFullscreen;
   const [revealed, setRevealed] = useState(false);
   const collapsed = (state.settings?.sidebarCollapsed ?? false) || narrow;
-  const showChrome = !focusMode || revealed;
+  const showChrome = !immersive || revealed;
   const pageVisible = state.ready && state.page === 'portal' && !state.nav?.error;
   const viewport = useViewport(pageVisible);
 
   useTheme(state.settings?.theme);
 
   useEffect(() => {
-    if (!focusMode) setRevealed(false);
-  }, [focusMode]);
+    if (!immersive) setRevealed(false);
+  }, [immersive]);
+
+  // Ctrl+L in an immersive layout shows the controls so the address bar can take focus.
+  useEffect(() => {
+    if (immersive && state.addressFocusToken > 0) setRevealed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.addressFocusToken]);
 
   if (!state.ready) {
     return (
@@ -59,7 +68,8 @@ export function App() {
     );
   }
 
-  const toggleSidebar = () => void api.invoke('settings:update', { sidebarCollapsed: !state.settings?.sidebarCollapsed });
+  const toggleSidebar = () =>
+    void api.invoke('settings:update', { sidebarCollapsed: !state.settings?.sidebarCollapsed });
 
   let content;
   switch (state.page) {
@@ -87,13 +97,10 @@ export function App() {
   }
 
   return (
-    <div className={`app ${focusMode ? 'app--focus' : ''} ${state.assistantOpen ? 'app--assistant' : ''}`}>
-      {pageFullscreen && (
-        <div className="fullscreen-hint" role="status">
-          The page is in full screen. Press <kbd>Esc</kbd> to exit.
-        </div>
-      )}
-      {focusMode && !revealed && (
+    <div
+      className={`app ${immersive ? 'app--focus' : ''} ${state.assistantOpen ? 'app--assistant' : ''}`}
+    >
+      {immersive && !revealed && (
         <div
           className="reveal-strip"
           onMouseEnter={() => setRevealed(true)}
@@ -107,7 +114,7 @@ export function App() {
         <div
           className="chrome-top"
           onMouseLeave={() => {
-            if (focusMode) setTimeout(() => setRevealed(false), 900);
+            if (immersive) setTimeout(() => setRevealed(false), 900);
           }}
         >
           <TitleBar onToggleSidebar={toggleSidebar} />
@@ -119,7 +126,7 @@ export function App() {
         <SiteInfoBand />
       </div>
       <div className="workspace">
-        {!focusMode && <Sidebar collapsed={collapsed} />}
+        {!immersive && <Sidebar collapsed={collapsed} />}
         <main className="content" id="content">
           {content}
         </main>

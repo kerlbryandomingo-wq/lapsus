@@ -84,9 +84,15 @@ export function prepareStudyInput(raw: string): PreparedInput {
 
   let text = raw.replace(CONTROL_CHARS, '').replace(/\r\n?/g, '\n');
   text = redact(/\b(?:password|passcode|pwd|pin)\s*[:=]\s*\S+/gi, 'password')(text);
-  text = redact(/\b(?:bearer|token|api[_-]?key|secret)\s*[:=]?\s*[A-Za-z0-9._~+/-]{16,}=*/gi, 'token')(text);
+  text = redact(
+    /\b(?:bearer|token|api[_-]?key|secret)\s*[:=]?\s*[A-Za-z0-9._~+/-]{16,}=*/gi,
+    'token',
+  )(text);
   text = redact(/\bsk-[A-Za-z0-9_-]{16,}\b/g, 'key')(text);
-  text = redact(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, 'token')(text);
+  text = redact(
+    /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g,
+    'token',
+  )(text);
   text = redact(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, 'email')(text);
   text = text.replace(/\n{3,}/g, '\n\n').trim();
 
@@ -119,6 +125,7 @@ export function parseAnswer(raw: string): ParseResult {
     return { ok: false, error: 'The AI response was not valid JSON.' };
   }
   const parsed = AIAnswerSchema.safeParse(json);
-  if (!parsed.success) return { ok: false, error: 'The AI response did not match the expected format.' };
+  if (!parsed.success)
+    return { ok: false, error: 'The AI response did not match the expected format.' };
   return { ok: true, answer: parsed.data };
 }

@@ -19,20 +19,41 @@ describe('permission policy', () => {
     }
   });
   it('denies device and system access', () => {
-    for (const p of ['hid', 'serial', 'usb', 'midiSysex', 'openExternal', 'window-management', 'idle-detection', 'display-capture']) {
+    for (const p of [
+      'hid',
+      'serial',
+      'usb',
+      'midiSysex',
+      'openExternal',
+      'window-management',
+      'idle-detection',
+      'display-capture',
+    ]) {
       expect(decidePermission(p, 'https://a.example/')).toBe('deny');
     }
   });
   it('check handler honours only granted prompts', () => {
     expect(checkPermission('media', 'https://a.example', new Set())).toBe(false);
-    expect(checkPermission('media', 'https://a.example', new Set(['https://a.example|media']))).toBe(true);
-    expect(checkPermission('media', 'https://b.example', new Set(['https://a.example|media']))).toBe(false);
+    expect(
+      checkPermission('media', 'https://a.example', new Set(['https://a.example|media'])),
+    ).toBe(true);
+    expect(
+      checkPermission('media', 'https://b.example', new Set(['https://a.example|media'])),
+    ).toBe(false);
   });
 });
 
 describe('download policy', () => {
   it('flags executable types', () => {
-    for (const n of ['setup.exe', 'run.BAT', 'x.ps1', 'doc.pdf.js', 'archive.iso', 'macro.docm', 'shortcut.lnk']) {
+    for (const n of [
+      'setup.exe',
+      'run.BAT',
+      'x.ps1',
+      'doc.pdf.js',
+      'archive.iso',
+      'macro.docm',
+      'shortcut.lnk',
+    ]) {
       expect(isDangerousDownload(n)).toBe(true);
     }
     for (const n of ['notes.pdf', 'slides.pptx', 'data.csv', 'README', 'image.png']) {
@@ -72,7 +93,9 @@ describe('shortcuts', () => {
     const alt = { ...s, aiShortcut: 'Ctrl+Shift+K' as const };
     expect(matchShortcut(key('k', { control: true }), alt)).toBeNull();
     expect(matchShortcut(key('k', { control: true, shift: true }), alt)).toBe('toggle-ai');
-    expect(matchShortcut(key('k', { control: true }), { ...s, aiShortcutEnabled: false })).toBeNull();
+    expect(
+      matchShortcut(key('k', { control: true }), { ...s, aiShortcutEnabled: false }),
+    ).toBeNull();
   });
   it('maps browser shortcuts', () => {
     expect(matchShortcut(key('f', { control: true }), s)).toBe('find');
@@ -82,7 +105,8 @@ describe('shortcuts', () => {
     expect(matchShortcut(key('Escape'), s)).toBe('escape');
   });
   it('leaves ordinary typing and page keys alone', () => {
-    for (const k of ['a', 'k', 'Enter', 'Tab', ' ', 'ArrowLeft']) expect(matchShortcut(key(k), s)).toBeNull();
+    for (const k of ['a', 'k', 'Enter', 'Tab', ' ', 'ArrowLeft'])
+      expect(matchShortcut(key(k), s)).toBeNull();
     expect(matchShortcut(key('c', { control: true }), s)).toBeNull();
     expect(matchShortcut(key('v', { control: true }), s)).toBeNull();
     expect(matchShortcut({ ...key('k', { control: true }), type: 'keyUp' }, s)).toBeNull();

@@ -27,7 +27,11 @@ export function HistoryPage() {
   return (
     <PageLayout
       title="History"
-      subtitle={state.settings?.historyEnabled ? 'Pages you visited in Lapsus. Stored only on this computer.' : 'History is turned off in Settings. Nothing new is recorded.'}
+      subtitle={
+        state.settings?.historyEnabled
+          ? 'Pages you visited in Lapsus. Stored only on this computer.'
+          : 'History is turned off in Settings. Nothing new is recorded.'
+      }
       actions={
         confirm ? (
           <>
@@ -38,7 +42,10 @@ export function HistoryPage() {
                 await api.invoke('history:clear');
                 setConfirm(false);
                 load();
-                dispatch({ type: 'notice', notice: { level: 'success', message: 'Browsing history cleared.' } });
+                dispatch({
+                  type: 'notice',
+                  notice: { level: 'success', message: 'Browsing history cleared.' },
+                });
               }}
             >
               Delete all
@@ -48,7 +55,12 @@ export function HistoryPage() {
             </Button>
           </>
         ) : (
-          <Button variant="secondary" icon={<Trash2 size={16} />} disabled={items.length === 0 && !query} onClick={() => setConfirm(true)}>
+          <Button
+            variant="secondary"
+            icon={<Trash2 size={16} />}
+            disabled={items.length === 0 && !query}
+            onClick={() => setConfirm(true)}
+          >
             Clear history
           </Button>
         )
@@ -56,10 +68,18 @@ export function HistoryPage() {
     >
       <label className="searchbox">
         <Search size={16} aria-hidden="true" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search history" aria-label="Search history" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search history"
+          aria-label="Search history"
+        />
       </label>
       {items.length === 0 ? (
-        <EmptyState icon={<HistoryIcon size={24} />} title={query ? 'No matching pages' : 'No history'}>
+        <EmptyState
+          icon={<HistoryIcon size={24} />}
+          title={query ? 'No matching pages' : 'No history'}
+        >
           {query ? 'Try a different search.' : 'Pages you open will be listed here.'}
         </EmptyState>
       ) : (
@@ -69,7 +89,12 @@ export function HistoryPage() {
             <ul className="rows">
               {list.map((e) => (
                 <li key={e.id} className="row">
-                  <span className="row__time">{new Date(e.visitedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                  <span className="row__time">
+                    {new Date(e.visitedAt).toLocaleTimeString(undefined, {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </span>
                   <button
                     type="button"
                     className="row__main"

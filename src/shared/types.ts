@@ -2,7 +2,8 @@ import type { SecurityLevel } from './url';
 import type { Settings, AIProviderId } from './settings';
 import type { AIAnswer } from './ai';
 
-export type AppPage = 'home' | 'portal' | 'bookmarks' | 'history' | 'downloads' | 'settings' | 'about';
+export type AppPage =
+  'home' | 'portal' | 'bookmarks' | 'history' | 'downloads' | 'settings' | 'about';
 
 export interface PageError {
   kind: 'load-failed' | 'blocked' | 'insecure' | 'cert' | 'crashed' | 'offline';
@@ -86,7 +87,20 @@ export interface AIStatus {
 
 export type AIAskResult =
   | { ok: true; answer: AIAnswer; provider: AIProviderId; model: string; sentText: string }
-  | { ok: false; error: string; code: 'not-configured' | 'limit' | 'network' | 'auth' | 'refused' | 'invalid-response' | 'cancelled' | 'input' | 'unknown' };
+  | {
+      ok: false;
+      error: string;
+      code:
+        | 'not-configured'
+        | 'limit'
+        | 'network'
+        | 'auth'
+        | 'refused'
+        | 'invalid-response'
+        | 'cancelled'
+        | 'input'
+        | 'unknown';
+    };
 
 export interface AppInfo {
   name: string;
@@ -117,7 +131,13 @@ export type AppCommand =
   | { type: 'open-find' }
   | { type: 'close-overlays' }
   | { type: 'show-page'; page: AppPage }
-  | { type: 'notice'; level: 'info' | 'warning' | 'error'; message: string };
+  | {
+      type: 'notice';
+      level: 'info' | 'warning' | 'error';
+      message: string;
+      /** Set when the notice is about a blocked pop-up; the band then offers to allow that site. */
+      popupOrigin?: string;
+    };
 
 export type MainEvent =
   | { type: 'nav'; nav: NavState }

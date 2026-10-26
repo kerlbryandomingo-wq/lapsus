@@ -35,6 +35,7 @@ export function createHandlers(d: Deps): Handlers {
     'nav:reload': ({ ignoreCache }) => win.reload(ignoreCache),
     'nav:stop': () => win.stop(),
     'nav:allow-insecure': ({ url }) => win.allowInsecure(url),
+    'popups:allow-site': ({ origin }) => win.allowPopupsFrom(origin),
     'view:set-bounds': (rect) => {
       win.setPageBounds(rect);
       if (rect.visible) win.ensurePortalLoaded();

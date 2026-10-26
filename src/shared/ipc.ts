@@ -28,6 +28,7 @@ export const IpcRequests = {
   'nav:reload': z.object({ ignoreCache: z.boolean() }).strict(),
   'nav:stop': none,
   'nav:allow-insecure': z.object({ url }).strict(),
+  'popups:allow-site': z.object({ origin: url }).strict(),
   'view:set-bounds': z
     .object({
       x: z.number().finite().min(0).max(20000),
@@ -58,7 +59,9 @@ export const IpcRequests = {
     .strict(),
   'bookmarks:remove': z.object({ id }).strict(),
   'bookmarks:open': z.object({ id }).strict(),
-  'history:list': z.object({ query: z.string().max(200), limit: z.number().int().min(1).max(500) }).strict(),
+  'history:list': z
+    .object({ query: z.string().max(200), limit: z.number().int().min(1).max(500) })
+    .strict(),
   'history:remove': z.object({ id }).strict(),
   'history:clear': none,
   'history:open': z.object({ id }).strict(),
@@ -83,7 +86,9 @@ export const IpcRequests = {
   'ai:clear-key': z.object({ provider: z.enum(['openai', 'anthropic']) }).strict(),
   'ai:test': none,
   'ai:prepare': z.object({ material: z.string().max(50000) }).strict(),
-  'ai:ask': z.object({ material: z.string().min(1).max(50000), note: z.string().max(500) }).strict(),
+  'ai:ask': z
+    .object({ material: z.string().min(1).max(50000), note: z.string().max(500) })
+    .strict(),
   'ai:cancel': none,
   'ai:get-selection': none,
   'external:open': z.object({ url }).strict(),
@@ -102,6 +107,7 @@ export interface IpcResponses {
   'nav:reload': void;
   'nav:stop': void;
   'nav:allow-insecure': void;
+  'popups:allow-site': void;
   'view:set-bounds': void;
   'find:start': void;
   'find:stop': void;
@@ -143,10 +149,8 @@ export interface IpcResponses {
 export const IPC_INVOKE = 'lapsus:invoke';
 export const IPC_EVENT = 'lapsus:event';
 
-
 export type ValidationResult<C extends IpcChannel> =
-  | { ok: true; channel: C; arg: IpcArg<C> }
-  | { ok: false; error: string };
+  { ok: true; channel: C; arg: IpcArg<C> } | { ok: false; error: string };
 
 /** Validates an incoming request. Used by the main process before any handler runs. */
 export function validateRequest(channel: unknown, arg: unknown): ValidationResult<IpcChannel> {

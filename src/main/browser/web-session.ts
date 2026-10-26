@@ -1,7 +1,12 @@
 import { app, dialog, session, type BaseWindow, type Session } from 'electron';
 import { WEB_PARTITION } from '@shared/constants';
 import type { CertificateInfo } from '@shared/types';
-import { checkPermission, decidePermission, originOf, permissionLabel } from '../security/permission-policy';
+import {
+  checkPermission,
+  decidePermission,
+  originOf,
+  permissionLabel,
+} from '../security/permission-policy';
 
 /**
  * Configures the session used for remote web content (the portal and anything else browsed).
@@ -32,7 +37,8 @@ export class WebSession {
       if (this.grants.has(key)) return callback(true);
       const win = this.getWindow();
       if (!win) return callback(false);
-      const mediaTypes = 'mediaTypes' in details && Array.isArray(details.mediaTypes) ? details.mediaTypes : [];
+      const mediaTypes =
+        'mediaTypes' in details && Array.isArray(details.mediaTypes) ? details.mediaTypes : [];
       void dialog
         .showMessageBox(win, {
           type: 'question',

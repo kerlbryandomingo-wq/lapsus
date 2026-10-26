@@ -1,4 +1,13 @@
-import { Home, GraduationCap, Bookmark, History, Download, Sparkles, Settings, Info } from 'lucide-react';
+import {
+  Home,
+  GraduationCap,
+  Bookmark,
+  History,
+  Download,
+  Sparkles,
+  Settings,
+  Info,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { AppPage } from '@shared/types';
 import { useStore } from '../lib/store';
@@ -25,7 +34,8 @@ const FOOTER: Item[] = [
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const { state, dispatch } = useStore();
-  const active = (item: Item) => (item.page === 'assistant' ? state.assistantOpen : state.page === item.page);
+  const active = (item: Item) =>
+    item.page === 'assistant' ? state.assistantOpen : state.page === item.page;
   const activeDownloads = state.downloads.filter((d) => d.state === 'progressing').length;
 
   const render = (item: Item) => (
@@ -36,12 +46,16 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
         aria-current={item.page !== 'assistant' && active(item) ? 'page' : undefined}
         title={collapsed ? item.label : undefined}
         onClick={() =>
-          item.page === 'assistant' ? dispatch({ type: 'assistant' }) : dispatch({ type: 'page', page: item.page })
+          item.page === 'assistant'
+            ? dispatch({ type: 'assistant' })
+            : dispatch({ type: 'page', page: item.page })
         }
       >
         <span className="nav-item__icon">{item.icon}</span>
         <span className="nav-item__label">{item.label}</span>
-        {item.page === 'downloads' && activeDownloads > 0 && <span className="nav-item__badge">{activeDownloads}</span>}
+        {item.page === 'downloads' && activeDownloads > 0 && (
+          <span className="nav-item__badge">{activeDownloads}</span>
+        )}
       </button>
     </li>
   );

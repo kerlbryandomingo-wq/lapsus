@@ -9,7 +9,11 @@ export function Button({
   children,
   className = '',
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg'; icon?: ReactNode }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  size?: 'sm' | 'md' | 'lg';
+  icon?: ReactNode;
+}) {
   return (
     <button type="button" className={`btn btn--${variant} btn--${size} ${className}`} {...rest}>
       {icon}
@@ -39,7 +43,13 @@ export function IconButton({
   );
 }
 
-export function Pill({ tone = 'neutral', children }: { tone?: 'neutral' | 'gold' | 'success' | 'warning' | 'danger' | 'ai' | 'maroon'; children: ReactNode }) {
+export function Pill({
+  tone = 'neutral',
+  children,
+}: {
+  tone?: 'neutral' | 'gold' | 'success' | 'warning' | 'danger' | 'ai' | 'maroon';
+  children: ReactNode;
+}) {
   return <span className={`pill pill--${tone}`}>{children}</span>;
 }
 
@@ -73,7 +83,14 @@ export function ProgressRing({
       aria-valuenow={value === undefined ? undefined : Math.round(v * 100)}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-        <circle className="ring__track" cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} fill="none" />
+        <circle
+          className="ring__track"
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          strokeWidth={stroke}
+          fill="none"
+        />
         <circle
           className="ring__value"
           cx={size / 2}
@@ -123,7 +140,17 @@ export function Switch({
   );
 }
 
-export function EmptyState({ icon, title, children, action }: { icon: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
+export function EmptyState({
+  icon,
+  title,
+  children,
+  action,
+}: {
+  icon: ReactNode;
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
     <div className="empty">
       <div className="empty__icon">{icon}</div>

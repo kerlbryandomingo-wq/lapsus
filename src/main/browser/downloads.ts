@@ -84,7 +84,9 @@ export class DownloadManager {
   }
 
   list(): DownloadInfo[] {
-    return [...this.items.values()].map((e) => ({ ...e.info })).sort((a, b) => b.startedAt - a.startedAt);
+    return [...this.items.values()]
+      .map((e) => ({ ...e.info }))
+      .sort((a, b) => b.startedAt - a.startedAt);
   }
 
   cancel(id: string): void {
@@ -98,7 +100,8 @@ export class DownloadManager {
 
   async open(id: string): Promise<{ ok: boolean; message?: string }> {
     const info = this.items.get(id)?.info;
-    if (!info || info.state !== 'completed' || !info.savePath) return { ok: false, message: 'File is not available.' };
+    if (!info || info.state !== 'completed' || !info.savePath)
+      return { ok: false, message: 'File is not available.' };
     if (info.dangerous) {
       // Programs are never launched from inside Lapsus; show them in Explorer instead.
       shell.showItemInFolder(info.savePath);

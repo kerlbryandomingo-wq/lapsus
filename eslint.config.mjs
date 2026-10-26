@@ -34,7 +34,20 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.mjs', 'tests/**/*.mjs'],
-    languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
+    files: ['scripts/**/*.mjs', 'tests/**/*.mjs', 'tests/**/*.cjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['tests/**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: { require: 'readonly', __dirname: 'readonly' } },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 );

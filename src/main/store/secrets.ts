@@ -37,7 +37,8 @@ export class SecretStore {
     try {
       const ok = await safeStorage.isAsyncEncryptionAvailable();
       // On Linux without a keyring, Chromium falls back to a fixed key, which is not real protection.
-      const weak = process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text';
+      const weak =
+        process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text';
       this.available = ok && !weak;
     } catch {
       this.available = false;
@@ -66,7 +67,9 @@ export class SecretStore {
     const enc = this.data[name];
     if (!enc || !this.available) return null;
     try {
-      const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(Buffer.from(enc, 'base64'));
+      const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(
+        Buffer.from(enc, 'base64'),
+      );
       if (shouldReEncrypt) await this.set(name, result);
       return result;
     } catch {

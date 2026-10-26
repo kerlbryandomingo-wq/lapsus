@@ -1,5 +1,11 @@
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
-import { IPC_INVOKE, validateRequest, type IpcArg, type IpcChannel, type IpcResponses } from '@shared/ipc';
+import {
+  IPC_INVOKE,
+  validateRequest,
+  type IpcArg,
+  type IpcChannel,
+  type IpcResponses,
+} from '@shared/ipc';
 
 type Handler<C extends IpcChannel> = (arg: IpcArg<C>) => IpcResponses[C] | Promise<IpcResponses[C]>;
 export type Handlers = { [C in IpcChannel]: Handler<C> };

@@ -1,7 +1,9 @@
 import mark from '../assets/lapsus-mark.png';
 
 export function LapsusMark({ size = 28 }: { size?: number }) {
-  return <img src={mark} width={size} height={size} alt="" className="brand-mark" draggable={false} />;
+  return (
+    <img src={mark} width={size} height={size} alt="" className="brand-mark" draggable={false} />
+  );
 }
 
 export function Wordmark({ onDark }: { onDark?: boolean }) {

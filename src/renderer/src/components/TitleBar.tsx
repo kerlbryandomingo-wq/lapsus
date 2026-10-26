@@ -127,7 +127,13 @@ export function WindowControls() {
   const maximized = state.window?.maximized || state.window?.fullscreen;
   return (
     <div className="winctl" role="group" aria-label="Window controls">
-      <button type="button" className="winctl__btn" aria-label="Minimize" title="Minimize" onClick={() => void api.invoke('window:minimize')}>
+      <button
+        type="button"
+        className="winctl__btn"
+        aria-label="Minimize"
+        title="Minimize"
+        onClick={() => void api.invoke('window:minimize')}
+      >
         <Minus size={16} strokeWidth={1.5} aria-hidden="true" />
       </button>
       <button
@@ -137,9 +143,19 @@ export function WindowControls() {
         title={maximized ? 'Restore down' : 'Maximize'}
         onClick={() => void api.invoke('window:toggle-maximize')}
       >
-        {maximized ? <Copy size={14} strokeWidth={1.5} aria-hidden="true" /> : <Square size={13} strokeWidth={1.5} aria-hidden="true" />}
+        {maximized ? (
+          <Copy size={14} strokeWidth={1.5} aria-hidden="true" />
+        ) : (
+          <Square size={13} strokeWidth={1.5} aria-hidden="true" />
+        )}
       </button>
-      <button type="button" className="winctl__btn winctl__btn--close" aria-label="Close" title="Close" onClick={() => void api.invoke('window:close')}>
+      <button
+        type="button"
+        className="winctl__btn winctl__btn--close"
+        aria-label="Close"
+        title="Close"
+        onClick={() => void api.invoke('window:close')}
+      >
         <X size={17} strokeWidth={1.5} aria-hidden="true" />
       </button>
     </div>
@@ -156,7 +172,12 @@ export function TitleBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
         <IconButton label="Toggle sidebar" className="icon-btn--on-dark" onClick={onToggleSidebar}>
           <PanelLeft size={18} aria-hidden="true" />
         </IconButton>
-        <button type="button" className="titlebar__brand" onClick={() => dispatch({ type: 'page', page: 'home' })} aria-label="Lapsus home">
+        <button
+          type="button"
+          className="titlebar__brand"
+          onClick={() => dispatch({ type: 'page', page: 'home' })}
+          aria-label="Lapsus home"
+        >
           <Wordmark onDark />
         </button>
         <div className="titlebar__nav">
@@ -183,7 +204,11 @@ export function TitleBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             <ArrowRight size={18} aria-hidden="true" />
           </IconButton>
           {nav?.loading ? (
-            <IconButton label="Stop loading" className="icon-btn--on-dark" onClick={() => void api.invoke('nav:stop')}>
+            <IconButton
+              label="Stop loading"
+              className="icon-btn--on-dark"
+              onClick={() => void api.invoke('nav:stop')}
+            >
               <X size={18} aria-hidden="true" />
             </IconButton>
           ) : (
@@ -203,7 +228,9 @@ export function TitleBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
 
       <div className="titlebar__center">
         <AddressBar />
-        {nav?.loading && <div className="titlebar__progress" role="progressbar" aria-label="Page loading" />}
+        {nav?.loading && (
+          <div className="titlebar__progress" role="progressbar" aria-label="Page loading" />
+        )}
       </div>
 
       <div className="titlebar__right">
@@ -216,7 +243,11 @@ export function TitleBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             void api.invoke('window:set-focus-mode', { enabled: !focus });
           }}
         >
-          {focus ? <Minimize2 size={17} aria-hidden="true" /> : <Maximize2 size={17} aria-hidden="true" />}
+          {focus ? (
+            <Minimize2 size={17} aria-hidden="true" />
+          ) : (
+            <Maximize2 size={17} aria-hidden="true" />
+          )}
         </IconButton>
         <button
           type="button"
@@ -229,7 +260,12 @@ export function TitleBar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           <span>Assistant</span>
           <kbd>{state.settings?.aiShortcut ?? 'Ctrl+K'}</kbd>
         </button>
-        <IconButton label="Settings" className="icon-btn--on-dark" active={state.page === 'settings'} onClick={() => dispatch({ type: 'page', page: 'settings' })}>
+        <IconButton
+          label="Settings"
+          className="icon-btn--on-dark"
+          active={state.page === 'settings'}
+          onClick={() => dispatch({ type: 'page', page: 'settings' })}
+        >
           <SettingsIcon size={18} aria-hidden="true" />
         </IconButton>
         <WindowControls />

@@ -48,14 +48,18 @@ function aiShortcutMatches(input: KeyInput, setting: Settings['aiShortcut']): bo
  * Maps a keydown to a Lapsus action. Runs before the page sees the key, so only keys that
  * belong to the browser are claimed; everything else passes through to the page untouched.
  */
-export function matchShortcut(input: KeyInput, settings: Pick<Settings, 'aiShortcut' | 'aiShortcutEnabled'>): ShortcutAction | null {
+export function matchShortcut(
+  input: KeyInput,
+  settings: Pick<Settings, 'aiShortcut' | 'aiShortcutEnabled'>,
+): ShortcutAction | null {
   if (input.type !== 'keyDown') return null;
   const key = input.key;
   const lower = key.toLowerCase();
   const ctrl = input.control && !input.meta;
   const plain = !input.control && !input.alt && !input.shift && !input.meta;
 
-  if (settings.aiShortcutEnabled && aiShortcutMatches(input, settings.aiShortcut)) return 'toggle-ai';
+  if (settings.aiShortcutEnabled && aiShortcutMatches(input, settings.aiShortcut))
+    return 'toggle-ai';
 
   if (ctrl && !input.alt) {
     if (!input.shift) {

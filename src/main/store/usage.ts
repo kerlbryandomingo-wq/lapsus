@@ -26,7 +26,10 @@ export class UsageStore {
         const r = raw as Partial<UsageData>;
         return {
           month: typeof r?.month === 'string' ? r.month : currentMonth(),
-          requests: Number.isInteger(r?.requests) && (r.requests as number) >= 0 ? (r.requests as number) : 0,
+          requests:
+            Number.isInteger(r?.requests) && (r.requests as number) >= 0
+              ? (r.requests as number)
+              : 0,
         };
       },
     );

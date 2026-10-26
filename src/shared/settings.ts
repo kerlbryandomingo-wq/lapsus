@@ -14,6 +14,10 @@ export const SettingsSchema = z.object({
   theme: z.enum(['system', 'light', 'dark']).default('system'),
   displayName: z.string().trim().max(40).default(''),
   startup: z.enum(['portal', 'home', 'restore']).default('portal'),
+  /** How the window opens: genuine OS fullscreen (left with F11) or a maximized window. */
+  windowMode: z.enum(['fullscreen', 'maximized']).default('fullscreen'),
+  /** Where links and scripts that ask for a new window open: a pop-up window, or the main window. */
+  newWindows: z.enum(['popup', 'same-window']).default('popup'),
   searchEngine: z.enum(['google', 'bing', 'duckduckgo']).default('google'),
   historyEnabled: z.boolean().default(true),
   portalOnly: z.boolean().default(false),

@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Copy, Check, AlertTriangle, Target, BookOpenCheck, Lightbulb, HelpCircle } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  AlertTriangle,
+  Target,
+  BookOpenCheck,
+  Lightbulb,
+  HelpCircle,
+} from 'lucide-react';
 import type { AIAnswer } from '@shared/ai';
 import { IconButton, Pill, ProgressRing } from '../../components/ui';
 import { SafeText, answerToText } from './SafeText';
@@ -43,7 +51,9 @@ export function AnswerCard({ answer, source }: { answer: AIAnswer; source: strin
             <span className="answer__unverified">Not verified</span>
           </span>
         ) : (
-          <span className="answer__lead-none">No leading option. The material does not support a confident choice.</span>
+          <span className="answer__lead-none">
+            No leading option. The material does not support a confident choice.
+          </span>
         )}
       </div>
 
@@ -89,9 +99,23 @@ export function AnswerCard({ answer, source }: { answer: AIAnswer; source: strin
       )}
 
       <footer className="answer__confidence">
-        <ProgressRing value={CONF[answer.confidence]} size={40} stroke={5} label={`Confidence ${answer.confidence}`} tone={answer.confidence === 'high' ? 'success' : answer.confidence === 'medium' ? 'gold' : 'maroon'} />
+        <ProgressRing
+          value={CONF[answer.confidence]}
+          size={40}
+          stroke={5}
+          label={`Confidence ${answer.confidence}`}
+          tone={
+            answer.confidence === 'high'
+              ? 'success'
+              : answer.confidence === 'medium'
+                ? 'gold'
+                : 'maroon'
+          }
+        />
         <div>
-          <span className="answer__conf-label">{answer.confidence[0]!.toUpperCase() + answer.confidence.slice(1)} confidence</span>
+          <span className="answer__conf-label">
+            {answer.confidence[0]!.toUpperCase() + answer.confidence.slice(1)} confidence
+          </span>
           <span className="answer__conf-reason">{answer.confidenceReason}</span>
         </div>
       </footer>

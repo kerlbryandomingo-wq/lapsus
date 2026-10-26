@@ -15,7 +15,11 @@ const answer = JSON.stringify({
   warning: null,
 });
 
-function setup(settings: Partial<Settings>, provider?: Partial<AIProvider>, key: string | null = 'sk-test-key-123456') {
+function setup(
+  settings: Partial<Settings>,
+  provider?: Partial<AIProvider>,
+  key: string | null = 'sk-test-key-123456',
+) {
   const secrets = {
     encryptionAvailable: true,
     has: () => key !== null,
@@ -96,10 +100,20 @@ describe('AIService', () => {
 });
 
 describe('OpenAIProvider', () => {
-  const req = { apiKey: 'sk-secret-abcdef', model: 'm', userMessage: 'hi', signal: new AbortController().signal };
+  const req = {
+    apiKey: 'sk-secret-abcdef',
+    model: 'm',
+    userMessage: 'hi',
+    signal: new AbortController().signal,
+  };
 
   it('sends the key only in the Authorization header', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: answer } }] }), { status: 200 }));
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ choices: [{ message: { content: answer } }] }), {
+          status: 200,
+        }),
+    );
     await new OpenAIProvider(fetchMock as never).ask(req);
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.openai.com/v1/chat/completions');
@@ -121,16 +135,24 @@ describe('OpenAIProvider', () => {
   });
 
   it('treats refusals and empty output as errors', async () => {
-    const refusal = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { refusal: 'no' } }] })));
-    await expect(new OpenAIProvider(refusal as never).ask(req)).rejects.toMatchObject({ code: 'refused' });
+    const refusal = vi.fn(
+      async () => new Response(JSON.stringify({ choices: [{ message: { refusal: 'no' } }] })),
+    );
+    await expect(new OpenAIProvider(refusal as never).ask(req)).rejects.toMatchObject({
+      code: 'refused',
+    });
     const empty = vi.fn(async () => new Response(JSON.stringify({ choices: [] })));
-    await expect(new OpenAIProvider(empty as never).ask(req)).rejects.toMatchObject({ code: 'invalid-response' });
+    await expect(new OpenAIProvider(empty as never).ask(req)).rejects.toMatchObject({
+      code: 'invalid-response',
+    });
   });
 
   it('reports network failures', async () => {
     const down = vi.fn(async () => {
       throw new TypeError('fetch failed');
     });
-    await expect(new OpenAIProvider(down as never).ask(req)).rejects.toMatchObject({ code: 'network' });
+    await expect(new OpenAIProvider(down as never).ask(req)).rejects.toMatchObject({
+      code: 'network',
+    });
   });
 });

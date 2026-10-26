@@ -3,7 +3,16 @@ import { IpcRequests, validateRequest } from '@shared/ipc';
 
 describe('IPC validation', () => {
   it('rejects unknown channels', () => {
-    for (const ch of ['fs:read', 'shell:exec', '__proto__', 'constructor', 'toString', '', 42, null]) {
+    for (const ch of [
+      'fs:read',
+      'shell:exec',
+      '__proto__',
+      'constructor',
+      'toString',
+      '',
+      42,
+      null,
+    ]) {
       expect(validateRequest(ch, undefined).ok).toBe(false);
     }
   });
@@ -21,9 +30,22 @@ describe('IPC validation', () => {
   });
 
   it('bounds window geometry', () => {
-    expect(validateRequest('view:set-bounds', { x: 0, y: 0, width: 1e9, height: 1, visible: true }).ok).toBe(false);
-    expect(validateRequest('view:set-bounds', { x: Number.NaN, y: 0, width: 1, height: 1, visible: true }).ok).toBe(false);
-    expect(validateRequest('view:set-bounds', { x: 0, y: 52, width: 800, height: 600, visible: true }).ok).toBe(true);
+    expect(
+      validateRequest('view:set-bounds', { x: 0, y: 0, width: 1e9, height: 1, visible: true }).ok,
+    ).toBe(false);
+    expect(
+      validateRequest('view:set-bounds', {
+        x: Number.NaN,
+        y: 0,
+        width: 1,
+        height: 1,
+        visible: true,
+      }).ok,
+    ).toBe(false);
+    expect(
+      validateRequest('view:set-bounds', { x: 0, y: 52, width: 800, height: 600, visible: true })
+        .ok,
+    ).toBe(true);
   });
 
   it('rejects unknown settings keys and invalid values', () => {

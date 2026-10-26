@@ -3,7 +3,13 @@ import type { Settings } from '@shared/settings';
 import type { AIAskResult, AIStatus } from '@shared/types';
 import type { SecretStore } from '../store/secrets';
 import type { UsageStore } from '../store/usage';
-import { AnthropicProvider, DemoProvider, OpenAIProvider, ProviderError, type AIProvider } from './providers';
+import {
+  AnthropicProvider,
+  DemoProvider,
+  OpenAIProvider,
+  ProviderError,
+  type AIProvider,
+} from './providers';
 
 /**
  * Owns every AI request. Runs in the main process only: API keys never reach a renderer,
@@ -38,7 +44,8 @@ export class AIService {
     const provider = settings.aiProvider;
     const usage = { ...this.usage.snapshot(), limit: settings.aiMonthlyRequestLimit };
     const encryptionAvailable = this.secrets.encryptionAvailable;
-    const keyStored = provider === 'openai' || provider === 'anthropic' ? this.secrets.has(provider) : false;
+    const keyStored =
+      provider === 'openai' || provider === 'anthropic' ? this.secrets.has(provider) : false;
     let ready = false;
     let message: string;
     if (provider === 'none') {
@@ -56,7 +63,15 @@ export class AIService {
       ready = false;
       message = 'Monthly request limit reached. Raise it in Settings to continue.';
     }
-    return { provider, model: this.modelFor(settings), keyStored, encryptionAvailable, ready, usage, message };
+    return {
+      provider,
+      model: this.modelFor(settings),
+      keyStored,
+      encryptionAvailable,
+      ready,
+      usage,
+      message,
+    };
   }
 
   prepare(material: string) {
@@ -66,17 +81,23 @@ export class AIService {
   async ask(material: string, note: string): Promise<AIAskResult> {
     const settings = this.getSettings();
     const provider = settings.aiProvider;
-    if (provider === 'none') return { ok: false, code: 'not-configured', error: this.status().message };
+    if (provider === 'none')
+      return { ok: false, code: 'not-configured', error: this.status().message };
 
     const prepared = prepareStudyInput(material);
-    if (!prepared.text) return { ok: false, code: 'input', error: 'There is no question text to send.' };
+    if (!prepared.text)
+      return { ok: false, code: 'input', error: 'There is no question text to send.' };
 
     let apiKey = '';
     if (provider !== 'demo') {
       apiKey = (await this.secrets.get(provider)) ?? '';
       if (!apiKey) return { ok: false, code: 'not-configured', error: this.status().message };
       if (!this.usage.canSpend(settings.aiMonthlyRequestLimit)) {
-        return { ok: false, code: 'limit', error: 'Monthly request limit reached. Raise it in Settings to continue.' };
+        return {
+          ok: false,
+          code: 'limit',
+          error: 'Monthly request limit reached. Raise it in Settings to continue.',
+        };
       }
     }
 
@@ -116,10 +137,20 @@ export class AIService {
     const key = await this.secrets.get(provider);
     if (!key) return { ok: false, message: 'No API key saved for this provider.' };
     try {
-      await this.providers[provider].test(key, this.modelFor(settings) ?? '', new AbortController().signal);
-      return { ok: true, message: 'Connected. The key and model are valid. No request was billed.' };
+      await this.providers[provider].test(
+        key,
+        this.modelFor(settings) ?? '',
+        new AbortController().signal,
+      );
+      return {
+        ok: true,
+        message: 'Connected. The key and model are valid. No request was billed.',
+      };
     } catch (err) {
-      return { ok: false, message: err instanceof ProviderError ? err.message : 'Connection test failed.' };
+      return {
+        ok: false,
+        message: err instanceof ProviderError ? err.message : 'Connection test failed.',
+      };
     }
   }
 }

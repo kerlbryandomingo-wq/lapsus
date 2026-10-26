@@ -44,7 +44,8 @@ export function HomePage() {
   const portalVisited = recent.find((r) => hostOf(r.url).endsWith('amasystem.net'));
   const openPortal = (focus = false) => {
     dispatch({ type: 'page', page: 'portal' });
-    if (!state.nav?.url || !hostOf(state.nav.url).endsWith('amasystem.net')) void api.invoke('nav:portal');
+    if (!state.nav?.url || !hostOf(state.nav.url).endsWith('amasystem.net'))
+      void api.invoke('nav:portal');
     if (focus) void api.invoke('window:set-focus-mode', { enabled: true });
   };
 
@@ -53,7 +54,13 @@ export function HomePage() {
       <div className="home__inner">
         <header className="home__header">
           <div>
-            <p className="home__eyebrow">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+            <p className="home__eyebrow">
+              {new Date().toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
             <h1 className="home__title">
               {greeting()}
               {name ? `, ${name}` : ''}
@@ -71,18 +78,32 @@ export function HomePage() {
               AMA Discipulus
             </h2>
             <p className="hero__url">{hostOf(DEFAULT_PORTAL_URL)}</p>
-            <p className="hero__text">Courses, learning materials, assessments and your account, in a focused window.</p>
+            <p className="hero__text">
+              Courses, learning materials, assessments and your account, in a focused window.
+            </p>
             <div className="hero__actions">
-              <Button variant="accent" size="lg" onClick={() => openPortal(false)} icon={<ArrowRight size={18} />}>
+              <Button
+                variant="accent"
+                size="lg"
+                onClick={() => openPortal(false)}
+                icon={<ArrowRight size={18} />}
+              >
                 Continue to Discipulus
               </Button>
-              <Button variant="on-dark" size="lg" onClick={() => openPortal(true)} icon={<Maximize2 size={17} />}>
+              <Button
+                variant="on-dark"
+                size="lg"
+                onClick={() => openPortal(true)}
+                icon={<Maximize2 size={17} />}
+              >
                 Open in focus mode
               </Button>
             </div>
             <p className="hero__meta">
               <Clock size={13} aria-hidden="true" />
-              {portalVisited ? `Last opened ${relativeTime(portalVisited.visitedAt)}` : 'Not opened yet on this computer'}
+              {portalVisited
+                ? `Last opened ${relativeTime(portalVisited.visitedAt)}`
+                : 'Not opened yet on this computer'}
             </p>
           </div>
           <div className="hero__badge" aria-hidden="true">
@@ -98,15 +119,24 @@ export function HomePage() {
               title="Recent pages"
               action={
                 historyEnabled && recent.length > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={() => dispatch({ type: 'page', page: 'history' })}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => dispatch({ type: 'page', page: 'history' })}
+                  >
                     View history
                   </Button>
                 ) : undefined
               }
             />
             {recent.length === 0 ? (
-              <EmptyState icon={<HistoryIcon size={22} />} title={historyEnabled ? 'No recent pages yet' : 'History is turned off'}>
-                {historyEnabled ? 'Pages you open will appear here.' : 'Turn on history in Settings to see recent pages.'}
+              <EmptyState
+                icon={<HistoryIcon size={22} />}
+                title={historyEnabled ? 'No recent pages yet' : 'History is turned off'}
+              >
+                {historyEnabled
+                  ? 'Pages you open will appear here.'
+                  : 'Turn on history in Settings to see recent pages.'}
               </EmptyState>
             ) : (
               <ul className="list-cards">
@@ -139,7 +169,11 @@ export function HomePage() {
               title="Bookmarks"
               action={
                 bookmarks.length > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={() => dispatch({ type: 'page', page: 'bookmarks' })}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => dispatch({ type: 'page', page: 'bookmarks' })}
+                  >
                     Manage
                   </Button>
                 ) : undefined
@@ -192,14 +226,22 @@ export function HomePage() {
                 </ProgressRing>
               </div>
               <p className="ai-card__text">
-                Paste or select a practice question to get an explanation of the concept and the reasoning behind each option.
+                Paste or select a practice question to get an explanation of the concept and the
+                reasoning behind each option.
               </p>
               <p className="ai-card__status">
-                <span className={`status-dot ${ai?.ready ? 'is-ok' : 'is-off'}`} aria-hidden="true" />
+                <span
+                  className={`status-dot ${ai?.ready ? 'is-ok' : 'is-off'}`}
+                  aria-hidden="true"
+                />
                 {ai?.message ?? 'Checking…'}
               </p>
               <div className="ai-card__actions">
-                <Button variant="primary" onClick={() => dispatch({ type: 'assistant', open: true })} icon={<Sparkles size={16} />}>
+                <Button
+                  variant="primary"
+                  onClick={() => dispatch({ type: 'assistant', open: true })}
+                  icon={<Sparkles size={16} />}
+                >
                   Open assistant
                 </Button>
                 <Kbd>{state.settings?.aiShortcut ?? 'Ctrl+K'}</Kbd>
@@ -212,15 +254,27 @@ export function HomePage() {
             <section>
               <SectionHeader title="Quick actions" />
               <div className="quick-grid">
-                <button type="button" className="quick" onClick={() => dispatch({ type: 'page', page: 'downloads' })}>
+                <button
+                  type="button"
+                  className="quick"
+                  onClick={() => dispatch({ type: 'page', page: 'downloads' })}
+                >
                   <Download size={18} aria-hidden="true" />
                   <span>Downloads</span>
                 </button>
-                <button type="button" className="quick" onClick={() => dispatch({ type: 'page', page: 'bookmarks' })}>
+                <button
+                  type="button"
+                  className="quick"
+                  onClick={() => dispatch({ type: 'page', page: 'bookmarks' })}
+                >
                   <BookmarkIcon size={18} aria-hidden="true" />
                   <span>Bookmarks</span>
                 </button>
-                <button type="button" className="quick" onClick={() => dispatch({ type: 'page', page: 'history' })}>
+                <button
+                  type="button"
+                  className="quick"
+                  onClick={() => dispatch({ type: 'page', page: 'history' })}
+                >
                   <HistoryIcon size={18} aria-hidden="true" />
                   <span>History</span>
                 </button>
@@ -240,7 +294,9 @@ export function HomePage() {
           <span className="dot" aria-hidden="true" />
           <span>{navigator.onLine ? 'Online' : 'Offline'}</span>
           <span className="dot" aria-hidden="true" />
-          <span>AI: {ai?.provider === 'none' ? 'not configured' : ai?.ready ? 'ready' : 'needs setup'}</span>
+          <span>
+            AI: {ai?.provider === 'none' ? 'not configured' : ai?.ready ? 'ready' : 'needs setup'}
+          </span>
           <span className="statusbar__spacer" />
           <span>Independent student tool. Not affiliated with AMA Education System.</span>
         </footer>

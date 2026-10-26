@@ -20,7 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test && node tests/e2e/raw/visibility.mjs",
     "icons": "python3 -I scripts/make-icons.py",
     "package:win": "npm run build && electron-builder --win --x64 --publish never",
     "package:dir": "npm run build && electron-builder --dir --publish never",

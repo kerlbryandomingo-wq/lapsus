@@ -20,8 +20,21 @@ function Row({ b, onChange }: { b: Bookmark; onChange: () => void }) {
   if (editing) {
     return (
       <li className="row row--editing">
-        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Bookmark name" maxLength={300} />
-        <input className="input input--narrow" value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="Folder" aria-label="Folder" maxLength={60} />
+        <input
+          className="input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          aria-label="Bookmark name"
+          maxLength={300}
+        />
+        <input
+          className="input input--narrow"
+          value={folder}
+          onChange={(e) => setFolder(e.target.value)}
+          placeholder="Folder"
+          aria-label="Folder"
+          maxLength={60}
+        />
         <IconButton label="Save" onClick={() => void save()}>
           <Check size={16} />
         </IconButton>
@@ -77,7 +90,9 @@ export function BookmarksPage() {
       const key = b.folder || '';
       map.set(key, [...(map.get(key) ?? []), b]);
     }
-    return [...map.entries()].sort(([a], [b]) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)));
+    return [...map.entries()].sort(([a], [b]) =>
+      a === '' ? -1 : b === '' ? 1 : a.localeCompare(b),
+    );
   }, [items]);
 
   const canAdd = !!state.nav?.url && /^https?:/.test(state.nav.url) && !state.nav.bookmarked;
@@ -87,7 +102,12 @@ export function BookmarksPage() {
       title="Bookmarks"
       subtitle="Saved pages, organised into folders."
       actions={
-        <Button variant="primary" icon={<Plus size={16} />} disabled={!canAdd} onClick={() => void api.invoke('bookmarks:toggle-current').then(load)}>
+        <Button
+          variant="primary"
+          icon={<Plus size={16} />}
+          disabled={!canAdd}
+          onClick={() => void api.invoke('bookmarks:toggle-current').then(load)}
+        >
           Bookmark current page
         </Button>
       }

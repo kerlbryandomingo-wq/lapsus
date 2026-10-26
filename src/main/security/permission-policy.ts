@@ -19,7 +19,8 @@ export function decidePermission(permission: string, requestingUrl: string): Per
   } catch {
     return 'deny';
   }
-  const secure = url.protocol === 'https:' || (url.protocol === 'http:' && isLoopbackHost(url.hostname));
+  const secure =
+    url.protocol === 'https:' || (url.protocol === 'http:' && isLoopbackHost(url.hostname));
   if (!secure) return 'deny';
   if (AUTO_ALLOW.has(permission)) return 'allow';
   if (ASK.has(permission)) return 'prompt';
@@ -27,7 +28,11 @@ export function decidePermission(permission: string, requestingUrl: string): Per
 }
 
 /** Synchronous permission checks (no prompting possible). */
-export function checkPermission(permission: string, requestingOrigin: string, granted: ReadonlySet<string>): boolean {
+export function checkPermission(
+  permission: string,
+  requestingOrigin: string,
+  granted: ReadonlySet<string>,
+): boolean {
   const decision = decidePermission(permission, requestingOrigin);
   if (decision === 'allow') return true;
   if (decision === 'prompt') return granted.has(`${originOf(requestingOrigin)}|${permission}`);
@@ -45,7 +50,8 @@ export function originOf(raw: string): string {
 export function permissionLabel(permission: string, mediaTypes: readonly string[] = []): string {
   switch (permission) {
     case 'media':
-      if (mediaTypes.includes('video') && mediaTypes.includes('audio')) return 'use your camera and microphone';
+      if (mediaTypes.includes('video') && mediaTypes.includes('audio'))
+        return 'use your camera and microphone';
       if (mediaTypes.includes('video')) return 'use your camera';
       return 'use your microphone';
     case 'notifications':

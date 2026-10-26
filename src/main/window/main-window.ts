@@ -46,8 +46,25 @@ interface Insets {
 }
 
 const FULLSCREEN_HINT_MS = 3000;
-const FULLSCREEN_HINT_HEIGHT = 36;
+const HINT_WIDTH = 560;
+const HINT_HEIGHT = 56;
 const ISOLATED_WORLD_ID = 1001;
+/** How long a click or key press lets a page open one pop-up (Chromium's transient activation). */
+const POPUP_ACTIVATION_MS = 5000;
+/** Shortcuts that act on Lapsus's own UI. While a page is fullscreen that UI is hidden, so they go to the page. */
+const UI_SHORTCUTS: ReadonlySet<ShortcutAction> = new Set([
+  'toggle-ai',
+  'focus-address',
+  'find',
+  'bookmark',
+  'history',
+  'downloads',
+  'home',
+  'toggle-focus-mode',
+]);
+
+type HintKind = 'exit' | 'popup-blocked';
+type WindowOpenResult = ReturnType<Parameters<WebContents['setWindowOpenHandler']>[0]>;
 
 /**
  * The Lapsus window: one trusted view for the app UI and one sandboxed view for web content.
@@ -57,17 +74,28 @@ export class MainWindow {
   readonly window: BaseWindow;
   readonly ui: WebContentsView;
   readonly page: WebContentsView;
+  /** Small overlay drawn above a fullscreen page, so the page itself keeps the whole screen. */
+  private readonly hint: WebContentsView;
 
   private insets: Insets | null = null;
   private pageVisible = false;
-  private fullscreenHintUntil = 0;
   private hintTimer: NodeJS.Timeout | null = null;
+  /** Whether the window was already fullscreen (F11) when the page asked for fullscreen. */
+  private fullscreenBeforePage = false;
+  /** Last real click or key press per web contents, used to tell requested pop-ups from unrequested ones. */
+  private lastActivation = new Map<number, number>();
+  private popupAllowedOrigins = new Set<string>();
   private popups = new Set<BrowserWindow>();
   private allowedHttpOrigins = new Set<string>();
   private certErrorUrl: string | null = null;
   private pageError: PageError | null = null;
   private findActive = false;
-  private state: WindowState = { maximized: false, fullscreen: false, pageFullscreen: false, focusMode: false };
+  private state: WindowState = {
+    maximized: false,
+    fullscreen: false,
+    pageFullscreen: false,
+    focusMode: false,
+  };
   private loadedOnce = false;
   private uiReady = false;
 
@@ -117,8 +145,23 @@ export class MainWindow {
     this.page.setBackgroundColor('#FFFFFF');
     this.page.setVisible(false);
 
+    this.hint = new WebContentsView({
+      webPreferences: {
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        devTools: false,
+        javascript: false,
+      },
+    });
+    this.hint.setBackgroundColor('#00000000');
+    this.hint.setVisible(false);
+    this.hint.webContents.on('will-navigate', (event) => event.preventDefault());
+    this.hint.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
     this.window.contentView.addChildView(this.ui);
     this.window.contentView.addChildView(this.page);
+    this.window.contentView.addChildView(this.hint);
 
     this.state.focusMode = settings.rememberFocusMode && settings.focusMode;
 
@@ -150,9 +193,38 @@ export class MainWindow {
     });
   }
 
-  showMaximized(): void {
+  /** Shows a short message above the fullscreen page without moving or resizing the page. */
+  private showHint(kind: HintKind): void {
+    if (this.window.isDestroyed()) return;
+    this.positionHint();
+    void this.hint.webContents
+      .loadURL(new URL(`fullscreen-hint.html#${kind}`, this.deps.uiUrl).toString())
+      .catch(() => {});
+    this.hint.setVisible(true);
+    if (this.hintTimer) clearTimeout(this.hintTimer);
+    this.hintTimer = setTimeout(() => this.hideHint(), FULLSCREEN_HINT_MS);
+  }
+
+  private positionHint(): void {
+    const [w = 0] = this.window.getContentSize();
+    const width = Math.min(HINT_WIDTH, w);
+    this.hint.setBounds({ x: Math.round((w - width) / 2), y: 24, width, height: HINT_HEIGHT });
+  }
+
+  private hideHint(): void {
+    if (this.hintTimer) clearTimeout(this.hintTimer);
+    this.hintTimer = null;
+    if (!this.window.isDestroyed()) this.hint.setVisible(false);
+  }
+
+  /**
+   * Opens the window in the student's chosen presentation. "fullscreen" is real OS fullscreen of
+   * the Lapsus window (like pressing F11); it does not put the page into Fullscreen API mode.
+   */
+  showInitial(mode: Settings['windowMode']): void {
     this.window.maximize();
     this.window.show();
+    if (mode === 'fullscreen') this.window.setFullScreen(true);
     this.updateWindowState();
   }
 
@@ -194,7 +266,13 @@ export class MainWindow {
   // ---------------------------------------------------------------- layout
 
   /** Called by the UI with the rectangle (in DIPs) where web content should appear. */
-  setPageBounds(rect: { x: number; y: number; width: number; height: number; visible: boolean }): void {
+  setPageBounds(rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    visible: boolean;
+  }): void {
     const [w = 0, h = 0] = this.window.getContentSize();
     this.insets = {
       left: Math.max(0, Math.round(rect.x)),
@@ -212,10 +290,10 @@ export class MainWindow {
     this.ui.setBounds({ x: 0, y: 0, width: w, height: h });
 
     if (this.state.pageFullscreen) {
-      // A page in fullscreen gets the whole window, apart from a brief exit hint at the top.
-      const hint = Date.now() < this.fullscreenHintUntil ? FULLSCREEN_HINT_HEIGHT : 0;
-      this.page.setBounds({ x: 0, y: hint, width: w, height: Math.max(0, h - hint) });
+      // A page in fullscreen gets the whole window from the first frame; the exit hint floats above it.
+      this.page.setBounds({ x: 0, y: 0, width: w, height: h });
       this.page.setVisible(true);
+      if (this.hintTimer) this.positionHint();
       return;
     }
     if (!this.insets) {
@@ -236,7 +314,9 @@ export class MainWindow {
     try {
       // Ask the page to leave fullscreen through the standard API, in an isolated world.
       await this.page.webContents.executeJavaScriptInIsolatedWorld(ISOLATED_WORLD_ID, [
-        { code: 'document.fullscreenElement ? document.exitFullscreen().catch(() => {}) : undefined' },
+        {
+          code: 'document.fullscreenElement ? document.exitFullscreen().catch(() => {}) : undefined',
+        },
       ]);
     } catch {
       /* page may be gone */
@@ -279,15 +359,20 @@ export class MainWindow {
 
   private navContext(): NavigationContext {
     const s = this.deps.getSettings();
-    return { portalOnly: s.portalOnly, extraPortalHosts: s.extraPortalHosts, allowedHttpOrigins: this.allowedHttpOrigins };
+    return {
+      portalOnly: s.portalOnly,
+      extraPortalHosts: s.extraPortalHosts,
+      allowedHttpOrigins: this.allowedHttpOrigins,
+    };
   }
 
   private wirePage(wc: WebContents): void {
     wc.on('will-navigate', (event) => this.guardNavigation(event, event.url, event.isMainFrame));
     wc.on('will-redirect', (event) => this.guardNavigation(event, event.url, event.isMainFrame));
     wc.on('will-attach-webview', (event) => event.preventDefault());
-    wc.setWindowOpenHandler((details) => this.handleWindowOpen(details.url));
+    wc.setWindowOpenHandler((details) => this.handleWindowOpen(details.url, wc));
     wc.on('did-create-window', (child) => this.adoptPopup(child));
+    this.trackActivation(wc);
     wc.on('before-input-event', (event, input) => this.onInput(event, input, 'page'));
     wc.on('context-menu', (_event, params) => this.showContextMenu(wc, params));
 
@@ -338,31 +423,85 @@ export class MainWindow {
       this.publishNav();
     });
     wc.on('unresponsive', () =>
-      this.command({ type: 'notice', level: 'warning', message: 'The page is not responding. You can wait or reload it.' }),
+      this.command({
+        type: 'notice',
+        level: 'warning',
+        message: 'The page is not responding. You can wait or reload it.',
+      }),
     );
 
     wc.on('found-in-page', (_e, result) => {
-      this.emit({ type: 'find', find: { active: this.findActive, matches: result.matches, activeMatch: result.activeMatchOrdinal } });
+      this.emit({
+        type: 'find',
+        find: {
+          active: this.findActive,
+          matches: result.matches,
+          activeMatch: result.activeMatchOrdinal,
+        },
+      });
     });
     wc.on('enter-html-full-screen', () => {
+      // Entering fullscreen uses up the click that allowed it, as in Chromium, so it cannot also open a pop-up.
+      this.lastActivation.delete(wc.id);
+      this.fullscreenBeforePage = this.window.isFullScreen();
       this.state.pageFullscreen = true;
-      this.fullscreenHintUntil = Date.now() + FULLSCREEN_HINT_MS;
-      if (this.hintTimer) clearTimeout(this.hintTimer);
-      this.hintTimer = setTimeout(() => this.layout(), FULLSCREEN_HINT_MS + 20);
       if (!this.window.isFullScreen()) this.window.setFullScreen(true);
       this.updateWindowState();
+      this.showHint('exit');
     });
     wc.on('leave-html-full-screen', () => this.leftPageFullscreen());
   }
 
   private leftPageFullscreen(): void {
+    if (!this.state.pageFullscreen) return;
     this.state.pageFullscreen = false;
-    this.fullscreenHintUntil = 0;
-    if (this.window.isFullScreen()) this.window.setFullScreen(false);
+    this.hideHint();
+    // Return to the window state from before the page asked: windowed, or F11 fullscreen.
+    if (this.window.isFullScreen() && !this.fullscreenBeforePage) this.window.setFullScreen(false);
+    this.fullscreenBeforePage = false;
     this.updateWindowState();
   }
 
-  private guardNavigation(event: { preventDefault: () => void }, url: string, isMainFrame: boolean): void {
+  /** Records real clicks and key presses, the only things that may open a pop-up. */
+  private trackActivation(wc: WebContents): void {
+    const id = wc.id;
+    wc.on('input-event', (_event, input) => {
+      const t = input.type;
+      const key = (input as { keyCode?: string }).keyCode;
+      const activates =
+        t === 'mouseDown' ||
+        t === 'mouseUp' ||
+        t === 'touchEnd' ||
+        t === 'gestureTap' ||
+        ((t === 'rawKeyDown' || t === 'keyDown') && key !== 'Escape');
+      if (activates) this.lastActivation.set(id, Date.now());
+    });
+    wc.once('destroyed', () => this.lastActivation.delete(id));
+  }
+
+  /** True once per click or key press, like Chromium's transient user activation. */
+  private consumeActivation(wc: WebContents): boolean {
+    const at = this.lastActivation.get(wc.id);
+    if (at === undefined || Date.now() - at > POPUP_ACTIVATION_MS) return false;
+    this.lastActivation.delete(wc.id);
+    return true;
+  }
+
+  /** Lets a site open pop-ups without a click until Lapsus closes. */
+  allowPopupsFrom(origin: string): void {
+    try {
+      const o = new URL(origin).origin;
+      if (o.startsWith('https://') || o.startsWith('http://')) this.popupAllowedOrigins.add(o);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private guardNavigation(
+    event: { preventDefault: () => void },
+    url: string,
+    isMainFrame: boolean,
+  ): void {
     if (!isMainFrame) {
       // Subframes may load web pages but never local files or script URLs.
       if (!/^(https?:|about:blank|about:srcdoc|data:|blob:)/i.test(url)) event.preventDefault();
@@ -375,10 +514,25 @@ export class MainWindow {
       void this.openExternal(decision.url);
       return;
     }
-    this.showBlocked(url, decision.reason);
+    if (decision.reason === 'insecure') {
+      this.showBlocked(url, decision.reason);
+      return;
+    }
+    // A blocked link must not replace the page the student is on (an exam stays where it is).
+    this.command({
+      type: 'notice',
+      level: 'warning',
+      message:
+        decision.reason === 'credentials'
+          ? 'Lapsus blocked a link with embedded login details.'
+          : 'Lapsus blocked a link to an address it does not open.',
+    });
   }
 
-  private showBlocked(url: string, reason: 'invalid' | 'scheme' | 'insecure' | 'credentials'): void {
+  private showBlocked(
+    url: string,
+    reason: 'invalid' | 'scheme' | 'insecure' | 'credentials',
+  ): void {
     const description =
       reason === 'insecure'
         ? 'This page uses an unencrypted connection (HTTP). Information you send could be read or changed by others on the network.'
@@ -392,25 +546,62 @@ export class MainWindow {
     this.command({ type: 'show-page', page: 'portal' });
   }
 
-  private handleWindowOpen(url: string): ReturnType<Parameters<WebContents['setWindowOpenHandler']>[0]> {
+  private handleWindowOpen(url: string, opener: WebContents | null): WindowOpenResult {
     const decision = evaluateNavigation(url, this.navContext());
+    if (decision.action !== 'block' && opener && !this.consumeActivation(opener)) {
+      // No click or key press came before this request: block it, as Chrome does, and say so.
+      let origin: string | undefined;
+      try {
+        origin = new URL(opener.getURL()).origin;
+      } catch {
+        origin = undefined;
+      }
+      if (!origin || !this.popupAllowedOrigins.has(origin)) {
+        this.command({
+          type: 'notice',
+          level: 'warning',
+          message: 'Lapsus blocked a pop-up that opened without a click.',
+          popupOrigin: origin && /^https?:/.test(origin) ? origin : undefined,
+        });
+        if (this.state.pageFullscreen) this.showHint('popup-blocked');
+        return { action: 'deny' };
+      }
+    }
     if (decision.action === 'external') {
       void this.openExternal(decision.url);
       return { action: 'deny' };
     }
     if (decision.action === 'block') {
-      this.command({ type: 'notice', level: 'warning', message: 'Lapsus blocked a pop-up to an address it does not open.' });
+      this.command({
+        type: 'notice',
+        level: 'warning',
+        message: 'Lapsus blocked a pop-up to an address it does not open.',
+      });
+      if (this.state.pageFullscreen) this.showHint('popup-blocked');
+      return { action: 'deny' };
+    }
+    if (this.deps.getSettings().newWindows === 'same-window' && opener && url !== 'about:blank') {
+      // Keep everything in one window: open the address in the main view instead. The page's
+      // window.open() returns null, exactly as when a pop-up is refused, so nothing is misreported.
+      // Blank windows (often used for printing) still open as pop-ups, since they have no address to load.
+      this.loadPage(url);
       return { action: 'deny' };
     }
     const open = [...this.popups].filter((p) => !p.isDestroyed()).length;
     if (open >= MAX_POPUP_WINDOWS) {
-      this.command({ type: 'notice', level: 'warning', message: 'Too many pop-up windows are open. Close one and try again.' });
+      this.command({
+        type: 'notice',
+        level: 'warning',
+        message: 'Too many pop-up windows are open. Close one and try again.',
+      });
       return { action: 'deny' };
     }
     return {
       action: 'allow',
       outlivesOpener: false,
       overrideBrowserWindowOptions: {
+        // Owned by the main window, so a sign-in pop-up can never hide behind a fullscreen page.
+        parent: this.window,
         width: 1000,
         height: 760,
         autoHideMenuBar: true,
@@ -435,16 +626,25 @@ export class MainWindow {
     this.popups.add(child);
     child.setMenu(null);
     const wc = child.webContents;
-    wc.on('will-navigate', (event) => this.guardPopupNavigation(event, event.url, event.isMainFrame));
-    wc.on('will-redirect', (event) => this.guardPopupNavigation(event, event.url, event.isMainFrame));
+    wc.on('will-navigate', (event) =>
+      this.guardPopupNavigation(event, event.url, event.isMainFrame),
+    );
+    wc.on('will-redirect', (event) =>
+      this.guardPopupNavigation(event, event.url, event.isMainFrame),
+    );
     wc.on('will-attach-webview', (event) => event.preventDefault());
-    wc.setWindowOpenHandler((details) => this.handleWindowOpen(details.url));
+    wc.setWindowOpenHandler((details) => this.handleWindowOpen(details.url, wc));
     wc.on('did-create-window', (grandchild) => this.adoptPopup(grandchild));
+    this.trackActivation(wc);
     wc.on('context-menu', (_event, params) => this.showContextMenu(wc, params));
     child.on('closed', () => this.popups.delete(child));
   }
 
-  private guardPopupNavigation(event: { preventDefault: () => void }, url: string, isMainFrame: boolean): void {
+  private guardPopupNavigation(
+    event: { preventDefault: () => void },
+    url: string,
+    isMainFrame: boolean,
+  ): void {
     if (!isMainFrame) {
       if (!/^(https?:|about:blank|about:srcdoc|data:|blob:)/i.test(url)) event.preventDefault();
       return;
@@ -565,15 +765,18 @@ export class MainWindow {
 
   async getSelection(): Promise<{ text: string; reason?: string }> {
     try {
-      const result = (await this.page.webContents.executeJavaScriptInIsolatedWorld(ISOLATED_WORLD_ID, [
-        {
-          code: `(() => {
+      const result = (await this.page.webContents.executeJavaScriptInIsolatedWorld(
+        ISOLATED_WORLD_ID,
+        [
+          {
+            code: `(() => {
             const a = document.activeElement;
             if (a && a.tagName === 'INPUT' && String(a.type).toLowerCase() === 'password') return { text: '', reason: 'password' };
             return { text: String(window.getSelection() || '').slice(0, 50000) };
           })()`,
-        },
-      ])) as { text?: unknown; reason?: unknown };
+          },
+        ],
+      )) as { text?: unknown; reason?: unknown };
       const text = typeof result?.text === 'string' ? result.text : '';
       return result?.reason === 'password' ? { text: '', reason: 'password' } : { text };
     } catch {
@@ -588,7 +791,8 @@ export class MainWindow {
     let certificate = null;
     try {
       const parsed = new URL(url);
-      if (parsed.protocol === 'https:') certificate = this.deps.webSession.certificateFor(parsed.hostname);
+      if (parsed.protocol === 'https:')
+        certificate = this.deps.webSession.certificateFor(parsed.hostname);
     } catch {
       /* no url yet */
     }
@@ -614,7 +818,11 @@ export class MainWindow {
 
   // ---------------------------------------------------------------- keyboard
 
-  private onInput(event: { preventDefault: () => void }, input: Input, source: 'ui' | 'page'): void {
+  private onInput(
+    event: { preventDefault: () => void },
+    input: Input,
+    source: 'ui' | 'page',
+  ): void {
     const action = matchShortcut(input, this.deps.getSettings());
     if (!action) return;
     if (this.handleShortcut(action, source)) event.preventDefault();
@@ -622,6 +830,8 @@ export class MainWindow {
 
   /** Returns true when Lapsus consumed the key. */
   private handleShortcut(action: ShortcutAction, source: 'ui' | 'page'): boolean {
+    // A fullscreen page covers Lapsus's UI. Moving focus there would blur the page with nothing on screen.
+    if (this.state.pageFullscreen && UI_SHORTCUTS.has(action)) return false;
     switch (action) {
       case 'toggle-ai':
         this.command({ type: 'toggle-ai' });
@@ -681,10 +891,7 @@ export class MainWindow {
           void this.exitPageFullscreen();
           return true;
         }
-        if (this.window.isFullScreen()) {
-          this.window.setFullScreen(false);
-          return true;
-        }
+        // F11 fullscreen is left with F11, as in Chrome, so pages still receive Esc (for closing their own dialogs).
         if (this.findActive) {
           this.stopFind();
           this.command({ type: 'close-overlays' });
@@ -710,7 +917,10 @@ export class MainWindow {
     if (params.linkURL && /^https?:/i.test(params.linkURL)) {
       template.push(
         { label: 'Open link in new window', click: () => this.openLinkInWindow(params.linkURL) },
-        { label: 'Open link in default browser', click: () => void this.openExternal(params.linkURL) },
+        {
+          label: 'Open link in default browser',
+          click: () => void this.openExternal(params.linkURL),
+        },
         { label: 'Copy link address', click: () => clipboard.writeText(params.linkURL) },
         { type: 'separator' },
       );
@@ -727,7 +937,9 @@ export class MainWindow {
       );
       if (params.misspelledWord && params.dictionarySuggestions.length) {
         template.unshift(
-          ...params.dictionarySuggestions.slice(0, 5).map((s) => ({ label: s, click: () => wc.replaceMisspelling(s) })),
+          ...params.dictionarySuggestions
+            .slice(0, 5)
+            .map((s) => ({ label: s, click: () => wc.replaceMisspelling(s) })),
           { type: 'separator' as const },
         );
       }
@@ -749,7 +961,11 @@ export class MainWindow {
     if (!params.isEditable && !selection && !params.linkURL && isMainPage) {
       template.push(
         { label: 'Back', enabled: wc.navigationHistory.canGoBack(), click: () => this.back() },
-        { label: 'Forward', enabled: wc.navigationHistory.canGoForward(), click: () => this.forward() },
+        {
+          label: 'Forward',
+          enabled: wc.navigationHistory.canGoForward(),
+          click: () => this.forward(),
+        },
         { label: 'Reload', click: () => this.reload(false) },
       );
     }
@@ -767,7 +983,7 @@ export class MainWindow {
   }
 
   private openLinkInWindow(url: string): void {
-    const result = this.handleWindowOpen(url);
+    const result = this.handleWindowOpen(url, null);
     if (result.action !== 'allow') return;
     const child = new BrowserWindow(result.overrideBrowserWindowOptions);
     this.adoptPopup(child);

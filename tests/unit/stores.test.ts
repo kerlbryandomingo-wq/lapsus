@@ -9,7 +9,12 @@ const dir = () => mkdtempSync(join(tmpdir(), 'lapsus-test-'));
 
 describe('settings', () => {
   it('falls back to defaults per key for corrupt values', () => {
-    const s = coerceSettings({ theme: 'neon', historyEnabled: false, nodeIntegration: true, aiMonthlyRequestLimit: -5 });
+    const s = coerceSettings({
+      theme: 'neon',
+      historyEnabled: false,
+      nodeIntegration: true,
+      aiMonthlyRequestLimit: -5,
+    });
     expect(s.theme).toBe(DEFAULT_SETTINGS.theme);
     expect(s.historyEnabled).toBe(false);
     expect(s.aiMonthlyRequestLimit).toBe(DEFAULT_SETTINGS.aiMonthlyRequestLimit);

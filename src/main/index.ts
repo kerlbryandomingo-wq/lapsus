@@ -68,7 +68,10 @@ async function start(): Promise<void> {
   session.defaultSession.setPermissionRequestHandler((_wc, _p, cb) => cb(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
 
-  const iconCandidates = [join(process.resourcesPath, 'icon.png'), join(__dirname, '../../build/icon.png')];
+  const iconCandidates = [
+    join(process.resourcesPath, 'icon.png'),
+    join(__dirname, '../../build/icon.png'),
+  ];
   const iconPath = iconCandidates.find((p) => existsSync(p));
   const portalUrl = e2ePortal || DEFAULT_PORTAL_URL;
 
@@ -137,11 +140,23 @@ async function start(): Promise<void> {
   });
 
   registerIpc(
-    createHandlers({ win, settings, bookmarks, history, sessionStore, secrets, ai, downloads, webSession, info, snapshot }),
+    createHandlers({
+      win,
+      settings,
+      bookmarks,
+      history,
+      sessionStore,
+      secrets,
+      ai,
+      downloads,
+      webSession,
+      info,
+      snapshot,
+    }),
     (sender, frameUrl) => sender === win!.ui.webContents && isTrustedUiUrl(frameUrl, uiUrl),
   );
 
-  win.showMaximized();
+  win.showInitial(settings.get().windowMode);
 
   win.window.on('closed', () => {
     mainWindow = null;
@@ -153,7 +168,6 @@ async function start(): Promise<void> {
     history.flush();
     sessionStore.flush();
   });
-
 }
 
 process.on('uncaughtException', (err) => {

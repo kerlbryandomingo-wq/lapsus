@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Sparkles, X, TextSelect, Send, Pencil, Trash2, Settings as SettingsIcon, ChevronDown, ShieldCheck, CircleAlert } from 'lucide-react';
+import {
+  Sparkles,
+  X,
+  TextSelect,
+  Send,
+  Pencil,
+  Trash2,
+  Settings as SettingsIcon,
+  ChevronDown,
+  ShieldCheck,
+  CircleAlert,
+} from 'lucide-react';
 import type { AIAnswer } from '@shared/ai';
 import { useStore } from '../../lib/store';
 import { api } from '../../lib/api';
@@ -18,7 +29,12 @@ interface Review {
 
 let entryId = 0;
 
-const PROVIDER_NAME: Record<string, string> = { openai: 'OpenAI', anthropic: 'Anthropic', demo: 'Demo mode', none: 'No provider' };
+const PROVIDER_NAME: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  demo: 'Demo mode',
+  none: 'No provider',
+};
 
 export function AssistantPanel() {
   const { state, dispatch } = useStore();
@@ -39,11 +55,20 @@ export function AssistantPanel() {
   const pullSelection = async () => {
     const res = await api.invoke('ai:get-selection');
     if (res.reason === 'password') {
-      dispatch({ type: 'notice', notice: { level: 'warning', message: 'Lapsus never reads password fields.' } });
+      dispatch({
+        type: 'notice',
+        notice: { level: 'warning', message: 'Lapsus never reads password fields.' },
+      });
       return;
     }
     if (!res.text.trim()) {
-      dispatch({ type: 'notice', notice: { level: 'info', message: 'Select the question and its choices on the page first, then try again.' } });
+      dispatch({
+        type: 'notice',
+        notice: {
+          level: 'info',
+          message: 'Select the question and its choices on the page first, then try again.',
+        },
+      });
       return;
     }
     setMaterial(res.text.trim());
@@ -74,13 +99,22 @@ export function AssistantPanel() {
     if (result.ok) {
       setEntries((e) => [
         ...e,
-        { id: ++entryId, kind: 'answer', question, answer: result.answer, source: `${PROVIDER_NAME[result.provider]}${result.provider === 'demo' ? '' : ` · ${result.model}`}` },
+        {
+          id: ++entryId,
+          kind: 'answer',
+          question,
+          answer: result.answer,
+          source: `${PROVIDER_NAME[result.provider]}${result.provider === 'demo' ? '' : ` · ${result.model}`}`,
+        },
       ]);
       setMaterial('');
       setNote('');
       setReview(null);
     } else if (result.code !== 'cancelled') {
-      setEntries((e) => [...e, { id: ++entryId, kind: 'error', question, error: result.error, code: result.code }]);
+      setEntries((e) => [
+        ...e,
+        { id: ++entryId, kind: 'error', question, error: result.error, code: result.code },
+      ]);
     }
   };
 
@@ -108,14 +142,22 @@ export function AssistantPanel() {
               <Trash2 size={16} />
             </IconButton>
           )}
-          <IconButton label="Close assistant" onClick={() => dispatch({ type: 'assistant', open: false })}>
+          <IconButton
+            label="Close assistant"
+            onClick={() => dispatch({ type: 'assistant', open: false })}
+          >
             <X size={17} />
           </IconButton>
         </div>
       </header>
 
       <div className="assistant__notice">
-        <button type="button" className="assistant__notice-toggle" onClick={() => setShowInfo((v) => !v)} aria-expanded={showInfo}>
+        <button
+          type="button"
+          className="assistant__notice-toggle"
+          onClick={() => setShowInfo((v) => !v)}
+          aria-expanded={showInfo}
+        >
           <ShieldCheck size={14} aria-hidden="true" />
           <span>Study mode · nothing is sent until you press Send</span>
           <ChevronDown size={14} aria-hidden="true" className={showInfo ? 'is-open' : ''} />
@@ -123,12 +165,17 @@ export function AssistantPanel() {
         {showInfo && (
           <div className="assistant__notice-body">
             <p>
-              Lapsus does not read the page by itself. You paste text or choose <em>Use selected text</em>, review exactly what
-              will be sent, then press Send. The text goes from your computer to {configured ? providerName : 'the provider you choose'}{' '}
-              and nowhere else. Passwords, cookies, whole pages and history are never sent. Things that look like passwords,
+              Lapsus does not read the page by itself. You paste text or choose{' '}
+              <em>Use selected text</em>, review exactly what will be sent, then press Send. The
+              text goes from your computer to{' '}
+              {configured ? providerName : 'the provider you choose'} and nowhere else. Passwords,
+              cookies, whole pages and history are never sent. Things that look like passwords,
               tokens and email addresses are removed first.
             </p>
-            <p>Use the assistant to understand material. Follow your course's rules for graded quizzes and exams.</p>
+            <p>
+              Use the assistant to understand material. Follow your course's rules for graded
+              quizzes and exams.
+            </p>
           </div>
         )}
       </div>
@@ -140,12 +187,22 @@ export function AssistantPanel() {
               <Sparkles size={18} aria-hidden="true" />
             </ProgressRing>
             <h3>Set up the assistant</h3>
-            <p>Choose OpenAI or Anthropic and add your own API key, or try the offline demo to see how answers look.</p>
+            <p>
+              Choose OpenAI or Anthropic and add your own API key, or try the offline demo to see
+              how answers look.
+            </p>
             <div className="assistant__empty-actions">
-              <Button variant="primary" icon={<SettingsIcon size={15} />} onClick={() => dispatch({ type: 'page', page: 'settings' })}>
+              <Button
+                variant="primary"
+                icon={<SettingsIcon size={15} />}
+                onClick={() => dispatch({ type: 'page', page: 'settings' })}
+              >
                 Open Settings
               </Button>
-              <Button variant="secondary" onClick={() => void api.invoke('settings:update', { aiProvider: 'demo' })}>
+              <Button
+                variant="secondary"
+                onClick={() => void api.invoke('settings:update', { aiProvider: 'demo' })}
+              >
                 Try demo mode
               </Button>
             </div>
@@ -154,7 +211,10 @@ export function AssistantPanel() {
         {configured && entries.length === 0 && !busy && (
           <div className="assistant__empty assistant__empty--hint">
             <h3>Ask about a practice question</h3>
-            <p>Paste a question with its answer choices, or select it on the page and choose Use selected text.</p>
+            <p>
+              Paste a question with its answer choices, or select it on the page and choose Use
+              selected text.
+            </p>
           </div>
         )}
         {entries.map((e) => (
@@ -171,7 +231,11 @@ export function AssistantPanel() {
                   <strong>The assistant could not answer</strong>
                   <p>{e.error}</p>
                   {(e.code === 'not-configured' || e.code === 'auth' || e.code === 'limit') && (
-                    <Button variant="ghost" size="sm" onClick={() => dispatch({ type: 'page', page: 'settings' })}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => dispatch({ type: 'page', page: 'settings' })}
+                    >
                       Open Settings
                     </Button>
                   )}
@@ -184,7 +248,11 @@ export function AssistantPanel() {
           <div className="assistant__loading" role="status">
             <ProgressRing label="Waiting for the AI" size={28} stroke={4} tone="navy" />
             <span>Thinking it through…</span>
-            <Button variant="ghost" size="sm" onClick={() => void api.invoke('ai:cancel').then(() => setBusy(false))}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void api.invoke('ai:cancel').then(() => setBusy(false))}
+            >
               Cancel
             </Button>
           </div>
@@ -199,7 +267,8 @@ export function AssistantPanel() {
                 <Pill tone="gold">Review before sending</Pill>
                 <span className="review__meta">
                   {review.text.length} characters
-                  {review.redactions > 0 && ` · ${review.redactions} item${review.redactions > 1 ? 's' : ''} removed`}
+                  {review.redactions > 0 &&
+                    ` · ${review.redactions} item${review.redactions > 1 ? 's' : ''} removed`}
                   {review.truncated && ' · shortened'}
                 </span>
               </div>
@@ -208,10 +277,20 @@ export function AssistantPanel() {
               </pre>
               {note.trim() && <p className="review__note">Your question: {note.trim()}</p>}
               <div className="review__actions">
-                <Button variant="ghost" icon={<Pencil size={15} />} onClick={() => setReview(null)} disabled={busy}>
+                <Button
+                  variant="ghost"
+                  icon={<Pencil size={15} />}
+                  onClick={() => setReview(null)}
+                  disabled={busy}
+                >
                   Edit
                 </Button>
-                <Button variant="primary" icon={<Send size={15} />} onClick={() => void send()} disabled={busy || !review.text || !ai?.ready}>
+                <Button
+                  variant="primary"
+                  icon={<Send size={15} />}
+                  onClick={() => void send()}
+                  disabled={busy || !review.text || !ai?.ready}
+                >
                   Send to {providerName}
                 </Button>
               </div>
@@ -240,10 +319,18 @@ export function AssistantPanel() {
                 maxLength={500}
               />
               <div className="composer__actions">
-                <Button variant="secondary" icon={<TextSelect size={15} />} onClick={() => void pullSelection()}>
+                <Button
+                  variant="secondary"
+                  icon={<TextSelect size={15} />}
+                  onClick={() => void pullSelection()}
+                >
                   Use selected text
                 </Button>
-                <Button variant="primary" onClick={() => void startReview()} disabled={!material.trim()}>
+                <Button
+                  variant="primary"
+                  onClick={() => void startReview()}
+                  disabled={!material.trim()}
+                >
                   Review
                 </Button>
               </div>

@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react';
 
-export function PageLayout({ title, subtitle, actions, children }: { title: string; subtitle?: string; actions?: ReactNode; children: ReactNode }) {
+export function PageLayout({
+  title,
+  subtitle,
+  actions,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <div className="page">
       <div className="page__inner">

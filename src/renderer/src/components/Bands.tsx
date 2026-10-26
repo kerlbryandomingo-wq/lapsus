@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronUp, ChevronDown, X, Info, AlertTriangle, CircleAlert, CircleCheck, Lock } from 'lucide-react';
+import {
+  ChevronUp,
+  ChevronDown,
+  X,
+  Info,
+  AlertTriangle,
+  CircleAlert,
+  CircleCheck,
+  Lock,
+} from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api } from '../lib/api';
 import { hostOf } from '../lib/format';
@@ -10,15 +19,40 @@ export function NoticeBand() {
   const notice = state.notice;
   useEffect(() => {
     if (!notice) return;
-    const t = setTimeout(() => dispatch({ type: 'notice', notice: null }), notice.level === 'error' ? 9000 : 5000);
+    const t = setTimeout(
+      () => dispatch({ type: 'notice', notice: null }),
+      notice.level === 'error' ? 9000 : 5000,
+    );
     return () => clearTimeout(t);
   }, [notice, dispatch]);
   if (!notice) return null;
-  const Icon = notice.level === 'error' ? CircleAlert : notice.level === 'warning' ? AlertTriangle : notice.level === 'success' ? CircleCheck : Info;
+  const Icon =
+    notice.level === 'error'
+      ? CircleAlert
+      : notice.level === 'warning'
+        ? AlertTriangle
+        : notice.level === 'success'
+          ? CircleCheck
+          : Info;
   return (
-    <div className={`band band--${notice.level}`} role={notice.level === 'error' ? 'alert' : 'status'}>
+    <div
+      className={`band band--${notice.level}`}
+      role={notice.level === 'error' ? 'alert' : 'status'}
+    >
       <Icon size={16} aria-hidden="true" />
       <span className="band__text">{notice.message}</span>
+      {notice.popupOrigin && (
+        <button
+          type="button"
+          className="band__action"
+          onClick={() => {
+            void api.invoke('popups:allow-site', { origin: notice.popupOrigin! });
+            dispatch({ type: 'notice', notice: null });
+          }}
+        >
+          Allow pop-ups from {hostOf(notice.popupOrigin)}
+        </button>
+      )}
       <IconButton label="Dismiss" onClick={() => dispatch({ type: 'notice', notice: null })}>
         <X size={15} aria-hidden="true" />
       </IconButton>
@@ -57,7 +91,8 @@ export function FindBar() {
         aria-label="Find in page"
         onChange={(e) => {
           setText(e.target.value);
-          if (e.target.value) void api.invoke('find:start', { text: e.target.value, forward: true, findNext: false });
+          if (e.target.value)
+            void api.invoke('find:start', { text: e.target.value, forward: true, findNext: false });
           else void api.invoke('find:stop');
         }}
         onKeyDown={(e) => {
@@ -68,7 +103,11 @@ export function FindBar() {
       <span className="find__count" aria-live="polite">
         {text ? (matches ? `${activeMatch} of ${matches}` : 'No matches') : ''}
       </span>
-      <IconButton label="Previous match (Shift+Enter)" onClick={() => run(false, true)} disabled={!matches}>
+      <IconButton
+        label="Previous match (Shift+Enter)"
+        onClick={() => run(false, true)}
+        disabled={!matches}
+      >
         <ChevronUp size={16} aria-hidden="true" />
       </IconButton>
       <IconButton label="Next match (Enter)" onClick={() => run(true, true)} disabled={!matches}>
@@ -101,7 +140,8 @@ export function SiteInfoBand() {
       break;
     case 'cert-error':
       headline = 'The certificate for this site could not be verified.';
-      detail = 'Lapsus refused to load the page. This can mean the connection is being intercepted.';
+      detail =
+        'Lapsus refused to load the page. This can mean the connection is being intercepted.';
       break;
     case 'local':
       headline = 'This page is served from your own computer.';
@@ -112,12 +152,18 @@ export function SiteInfoBand() {
       detail = '';
   }
   return (
-    <div className={`band band--site ${nav.security === 'secure' ? 'band--site-secure' : 'band--warning'}`} role="status">
+    <div
+      className={`band band--site ${nav.security === 'secure' ? 'band--site-secure' : 'band--warning'}`}
+      role="status"
+    >
       <Lock size={16} aria-hidden="true" />
       <span className="band__text">
         <strong>{headline}</strong> {detail}
       </span>
-      <IconButton label="Close site information" onClick={() => dispatch({ type: 'site-info', open: false })}>
+      <IconButton
+        label="Close site information"
+        onClick={() => dispatch({ type: 'site-info', open: false })}
+      >
         <X size={15} aria-hidden="true" />
       </IconButton>
     </div>

@@ -17,6 +17,7 @@ export interface Notice {
   id: number;
   level: 'info' | 'warning' | 'error' | 'success';
   message: string;
+  popupOrigin?: string;
 }
 
 export interface UIState {
@@ -72,10 +73,24 @@ function reducer(state: UIState, action: Action): UIState {
   switch (action.type) {
     case 'snapshot': {
       const s = action.snapshot;
-      return { ...state, ready: true, nav: s.nav, window: s.window, settings: s.settings, ai: s.ai, info: s.info, page: s.initialPage };
+      return {
+        ...state,
+        ready: true,
+        nav: s.nav,
+        window: s.window,
+        settings: s.settings,
+        ai: s.ai,
+        info: s.info,
+        page: s.initialPage,
+      };
     }
     case 'page':
-      return { ...state, page: action.page, siteInfoOpen: false, findOpen: action.page === 'portal' && state.findOpen };
+      return {
+        ...state,
+        page: action.page,
+        siteInfoOpen: false,
+        findOpen: action.page === 'portal' && state.findOpen,
+      };
     case 'assistant':
       return { ...state, assistantOpen: action.open ?? !state.assistantOpen };
     case 'find':
@@ -105,7 +120,11 @@ function reducer(state: UIState, action: Action): UIState {
             case 'toggle-ai':
               return { ...state, assistantOpen: !state.assistantOpen };
             case 'ask-selection':
-              return { ...state, assistantOpen: true, askSelectionToken: state.askSelectionToken + 1 };
+              return {
+                ...state,
+                assistantOpen: true,
+                askSelectionToken: state.askSelectionToken + 1,
+              };
             case 'focus-address':
               return { ...state, addressFocusToken: state.addressFocusToken + 1 };
             case 'open-find':
@@ -115,7 +134,15 @@ function reducer(state: UIState, action: Action): UIState {
             case 'show-page':
               return { ...state, page: c.page };
             case 'notice':
-              return { ...state, notice: { id: ++noticeId, level: c.level, message: c.message } };
+              return {
+                ...state,
+                notice: {
+                  id: ++noticeId,
+                  level: c.level,
+                  message: c.message,
+                  popupOrigin: c.popupOrigin,
+                },
+              };
           }
         }
       }
@@ -132,9 +159,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const off = api.onEvent((event) => dispatch({ type: 'event', event }));
     void api.invoke('state:get').then((snapshot) => dispatch({ type: 'snapshot', snapshot }));
-    void api.invoke('downloads:list').then((downloads) =>
-      dispatch({ type: 'event', event: { type: 'downloads', downloads } }),
-    );
+    void api
+      .invoke('downloads:list')
+      .then((downloads) => dispatch({ type: 'event', event: { type: 'downloads', downloads } }));
     return off;
   }, []);
 

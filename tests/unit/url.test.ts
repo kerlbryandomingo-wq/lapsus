@@ -9,12 +9,20 @@ import {
   type NavigationContext,
 } from '@shared/url';
 
-const ctx: NavigationContext = { portalOnly: false, extraPortalHosts: [], allowedHttpOrigins: new Set() };
+const ctx: NavigationContext = {
+  portalOnly: false,
+  extraPortalHosts: [],
+  allowedHttpOrigins: new Set(),
+};
 
 describe('normalizeAddressInput', () => {
   it('adds https to bare domains', () => {
-    expect(normalizeAddressInput('discipulusv2.amasystem.net', 'google')).toBe('https://discipulusv2.amasystem.net/');
-    expect(normalizeAddressInput('example.com/path?q=1', 'google')).toBe('https://example.com/path?q=1');
+    expect(normalizeAddressInput('discipulusv2.amasystem.net', 'google')).toBe(
+      'https://discipulusv2.amasystem.net/',
+    );
+    expect(normalizeAddressInput('example.com/path?q=1', 'google')).toBe(
+      'https://example.com/path?q=1',
+    );
   });
   it('uses http for loopback hosts', () => {
     expect(normalizeAddressInput('localhost:3000', 'google')).toBe('http://localhost:3000/');
@@ -25,7 +33,9 @@ describe('normalizeAddressInput', () => {
     expect(normalizeAddressInput('javascript:alert(1)', 'google')).toBe('javascript:alert(1)');
   });
   it('searches for everything else', () => {
-    expect(normalizeAddressInput('what is a queue', 'google')).toBe('https://www.google.com/search?q=what%20is%20a%20queue');
+    expect(normalizeAddressInput('what is a queue', 'google')).toBe(
+      'https://www.google.com/search?q=what%20is%20a%20queue',
+    );
     expect(normalizeAddressInput('fifo', 'duckduckgo')).toBe('https://duckduckgo.com/?q=fifo');
   });
   it('returns null for empty input', () => {
@@ -35,7 +45,9 @@ describe('normalizeAddressInput', () => {
 
 describe('evaluateNavigation', () => {
   it('allows https pages', () => {
-    expect(evaluateNavigation('https://discipulusv2.amasystem.net/login', ctx)).toEqual({ action: 'allow' });
+    expect(evaluateNavigation('https://discipulusv2.amasystem.net/login', ctx)).toEqual({
+      action: 'allow',
+    });
   });
 
   it.each([
@@ -57,34 +69,52 @@ describe('evaluateNavigation', () => {
 
   it('blocks malformed URLs', () => {
     expect(evaluateNavigation('http://', ctx)).toMatchObject({ action: 'block' });
-    expect(evaluateNavigation('not a url', ctx)).toMatchObject({ action: 'block', reason: 'invalid' });
+    expect(evaluateNavigation('not a url', ctx)).toMatchObject({
+      action: 'block',
+      reason: 'invalid',
+    });
   });
 
   it('blocks URLs with embedded credentials (phishing pattern)', () => {
-    expect(evaluateNavigation('https://discipulusv2.amasystem.net@evil.example/', ctx)).toMatchObject({
+    expect(
+      evaluateNavigation('https://discipulusv2.amasystem.net@evil.example/', ctx),
+    ).toMatchObject({
       action: 'block',
       reason: 'credentials',
     });
   });
 
   it('blocks plain http unless loopback or explicitly allowed', () => {
-    expect(evaluateNavigation('http://example.com/', ctx)).toMatchObject({ action: 'block', reason: 'insecure' });
+    expect(evaluateNavigation('http://example.com/', ctx)).toMatchObject({
+      action: 'block',
+      reason: 'insecure',
+    });
     expect(evaluateNavigation('http://127.0.0.1:5000/', ctx)).toEqual({ action: 'allow' });
     const allowed = { ...ctx, allowedHttpOrigins: new Set(['http://example.com']) };
     expect(evaluateNavigation('http://example.com/page', allowed)).toEqual({ action: 'allow' });
   });
 
   it('hands mail and phone links to the OS', () => {
-    expect(evaluateNavigation('mailto:registrar@example.edu', ctx)).toMatchObject({ action: 'external' });
+    expect(evaluateNavigation('mailto:registrar@example.edu', ctx)).toMatchObject({
+      action: 'external',
+    });
   });
 
   it('sends non-portal sites outside in portal-only mode', () => {
     const portalOnly = { ...ctx, portalOnly: true };
-    expect(evaluateNavigation('https://discipulusv2.amasystem.net/', portalOnly)).toEqual({ action: 'allow' });
-    expect(evaluateNavigation('https://www.youtube.com/watch?v=1', portalOnly)).toMatchObject({ action: 'external' });
-    expect(evaluateNavigation('https://amasystem.net.evil.example/', portalOnly)).toMatchObject({ action: 'external' });
+    expect(evaluateNavigation('https://discipulusv2.amasystem.net/', portalOnly)).toEqual({
+      action: 'allow',
+    });
+    expect(evaluateNavigation('https://www.youtube.com/watch?v=1', portalOnly)).toMatchObject({
+      action: 'external',
+    });
+    expect(evaluateNavigation('https://amasystem.net.evil.example/', portalOnly)).toMatchObject({
+      action: 'external',
+    });
     const extra = { ...portalOnly, extraPortalHosts: ['youtube.com'] };
-    expect(evaluateNavigation('https://www.youtube.com/watch?v=1', extra)).toEqual({ action: 'allow' });
+    expect(evaluateNavigation('https://www.youtube.com/watch?v=1', extra)).toEqual({
+      action: 'allow',
+    });
   });
 });
 
