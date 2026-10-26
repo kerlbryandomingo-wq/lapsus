@@ -34,21 +34,29 @@ Lapsus.
 
 ## Checks and results
 
-Results from 2026-10-26 on Linux (Xvfb, openbox) for commit 47d3aee and later:
+Results from 2026-10-26 on Linux (Xvfb, openbox) for commit ac778e6:
 
 | Check                                                      | Result                                                                                      |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | ESLint                                                     | Pass                                                                                        |
 | TypeScript (main, preload, renderer, tests)                | Pass                                                                                        |
 | Unit tests (Vitest)                                        | 83 passed                                                                                   |
-| End-to-end tests (Playwright + Electron)                   | 39 passed                                                                                   |
+| End-to-end tests (Playwright + Electron)                   | 40 passed                                                                                   |
 | Focus, visibility and crash harness (no DevTools attached) | 8 passed, 1 not run (minimizing a fullscreen window is refused by the Linux window manager) |
 | Packaged app fuses (Linux build)                           | As configured above                                                                         |
 | Artifact secret scan (`scripts/check-artifacts.mjs`)       | Pass; also confirmed it fails on a planted fake key                                         |
 | Packaged app smoke test (Linux build)                      | Pass                                                                                        |
 
 The Windows results come from the CI workflow on `windows-latest` (same tests plus installer
-install, metadata check and uninstall). See the Actions tab for each run.
+install, metadata check and uninstall). For commit ac778e6 (run 40263466671) all of it passed:
+83 unit tests, 40 end-to-end tests, all 12 harness checks including minimizing a fullscreen
+window, the packaged and installed smoke tests, and the fuse and secret checks. Both exes are
+reported as `NotSigned`.
+
+On Windows, a fullscreen window that loses focus to another window becomes 1 px shorter until it
+is focused again, so the page sees one resize each way. The harness shows the same thing for a
+plain Electron window with none of Lapsus's code, so it comes from Electron on Windows, not from
+Lapsus. Lapsus does not hide or alter that resize.
 
 ## Residual risks
 
