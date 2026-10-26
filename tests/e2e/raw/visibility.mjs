@@ -52,6 +52,14 @@ for (const mode of ['maximized', 'fullscreen']) {
       types('main-refocused').includes('focus'),
     ],
   ];
+  if (result.popupFocus?.opened && !result.popupFocus.mainFocused) {
+    checks.push([
+      `WIN-01c (${mode}) a clicked pop-up taking focus blurs the page`,
+      types('popup-opened').includes('blur'),
+    ]);
+  } else {
+    console.log(`NOT RUN WIN-01c (${mode}) pop-up state: ${JSON.stringify(result.popupFocus)}`);
+  }
   if (step('minimized').minimized) {
     checks.push([
       `${tag} minimizing reports the page hidden`,

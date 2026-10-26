@@ -43,6 +43,26 @@ app.on('ready', async () => {
     await wait(1000);
     await take('main-refocused');
 
+    // A pop-up opened by a real click on the page takes focus; the page must see blur.
+    const box = await page.executeJavaScript(
+      "(() => { const r = document.getElementById('open-btn').getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()",
+    );
+    page.sendInputEvent({ type: 'mouseDown', x: box.x, y: box.y, button: 'left', clickCount: 1 });
+    page.sendInputEvent({ type: 'mouseUp', x: box.x, y: box.y, button: 'left', clickCount: 1 });
+    await wait(1500);
+    const popups = BrowserWindow.getAllWindows();
+    result.popupFocus = {
+      opened: popups.length,
+      popupFocused: popups[0]?.isFocused() ?? false,
+      mainFocused: main.isFocused(),
+    };
+    await take('popup-opened');
+    for (const p of popups) p.destroy();
+    main.focus();
+    page.focus();
+    await wait(1000);
+    await take('popup-closed');
+
     main.minimize();
     await wait(1500);
     await take('minimized');
