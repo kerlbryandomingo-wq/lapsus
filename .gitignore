@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Test output
+test-results/
+playwright-report/
+coverage/
+
+# Logs and local env
+*.log
+.env
+.env.*
+!.env.example
+
+# Secrets and signing material
+*.pfx
+*.p12
+*.pem
+*.key
+secrets.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
