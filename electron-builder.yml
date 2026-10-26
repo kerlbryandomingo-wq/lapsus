@@ -1,0 +1,53 @@
+# Packaging for Windows 10 22H2 / 11 (x64). Builds run on GitHub Actions windows-latest.
+appId: com.krlbryn.lapsus
+productName: Lapsus
+copyright: Copyright © 2026 KRLBRYN
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+asar: true
+# Everything is bundled by electron-vite; no node_modules ship with the app.
+npmRebuild: false
+# Update checks are off in v0.1.0, so no update feed is generated.
+publish: null
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  # Unsigned by default. Code signing turns on automatically when the CSC_LINK and
+  # CSC_KEY_PASSWORD secrets are set in CI (see RELEASE.md). The publisher name in the
+  # file metadata is not a signature, and Windows SmartScreen may still warn.
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Lapsus
+  uninstallDisplayName: Lapsus
+  deleteAppDataOnUninstall: false
+  artifactName: Lapsus-Setup-x64.${ext}
+portable:
+  artifactName: Lapsus-Portable-x64.${ext}
+linux:
+  # Only used to check the packaged layout locally; not a supported release target.
+  target: dir

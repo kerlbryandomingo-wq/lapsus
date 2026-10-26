@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Build and test (Windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: End-to-end tests (Playwright)
+        run: npx playwright test
+
+      - name: Focus and visibility tests (no DevTools attached)
+        run: node tests/e2e/raw/visibility.mjs
+
+      - name: Package installer and portable app
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Scan build output for secrets
+        run: node scripts/check-artifacts.mjs out release/win-unpacked/resources
+
+      - name: Check Electron fuses
+        shell: pwsh
+        run: |
+          $out = npx --no-install @electron/fuses read --app release/win-unpacked/Lapsus.exe | Out-String
+          Write-Output $out
+          foreach ($line in @('RunAsNode is Disabled', 'EnableNodeOptionsEnvironmentVariable is Disabled',
+                              'EnableNodeCliInspectArguments is Disabled', 'EnableEmbeddedAsarIntegrityValidation is Enabled',
+                              'OnlyLoadAppFromAsar is Enabled', 'EnableCookieEncryption is Enabled')) {
+            if ($out -notmatch [regex]::Escape($line)) { throw "Fuse check failed: expected '$line'" }
+          }
+
+      - name: Smoke test unpacked app
+        run: node scripts/smoke-packaged.mjs release/win-unpacked/Lapsus.exe
+
+      - name: Install silently, check metadata, smoke test, uninstall
+        shell: pwsh
+        run: |
+          $setup = Resolve-Path release/Lapsus-Setup-x64.exe
+          Start-Process -FilePath $setup -ArgumentList '/S' -Wait
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\Lapsus\Lapsus.exe'
+          if (-not (Test-Path $exe)) { throw "Lapsus.exe not installed at $exe" }
+          $info = (Get-Item $exe).VersionInfo
+          Write-Output "ProductName=$($info.ProductName) CompanyName=$($info.CompanyName) FileVersion=$($info.FileVersion) LegalCopyright=$($info.LegalCopyright)"
+          if ($info.ProductName -ne 'Lapsus') { throw 'Unexpected ProductName' }
+          if ($info.CompanyName -ne 'KRLBRYN') { throw 'Unexpected CompanyName' }
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          if (-not $info.FileVersion.StartsWith($version)) { throw "Unexpected FileVersion $($info.FileVersion)" }
+          node scripts/smoke-packaged.mjs $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Installed app smoke test failed' }
+          $uninstaller = Join-Path $env:LOCALAPPDATA 'Programs\Lapsus\Uninstall Lapsus.exe'
+          Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait
+          Start-Sleep -Seconds 5
+          if (Test-Path $exe) { throw 'Uninstall left Lapsus.exe behind' }
+          Write-Output 'Install, smoke test and uninstall passed.'
+
+      - name: Signature status (informational)
+        shell: pwsh
+        run: |
+          foreach ($f in @('release/Lapsus-Setup-x64.exe', 'release/Lapsus-Portable-x64.exe')) {
+            $sig = Get-AuthenticodeSignature $f
+            Write-Output "$f : $($sig.Status)"
+          }
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          $lines = foreach ($f in @('Lapsus-Setup-x64.exe', 'Lapsus-Portable-x64.exe')) {
+            $h = (Get-FileHash -Algorithm SHA256 (Join-Path release $f)).Hash.ToLower()
+            "$h  $f"
+          }
+          $lines | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          Get-Content release/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lapsus-windows-x64
+          path: |
+            release/Lapsus-Setup-x64.exe
+            release/Lapsus-Portable-x64.exe
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore

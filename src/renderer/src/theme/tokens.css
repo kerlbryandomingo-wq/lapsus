@@ -1,0 +1,173 @@
+/*
+ * Lapsus design tokens. Brand colours are sampled from the official AMA Computer College logo:
+ * maroon #7A1B1B, navy #2A367D, gold #E7A323. Components use only these variables.
+ */
+:root {
+  --brand-maroon: #7a1b1b;
+  --brand-navy: #2a367d;
+  --brand-gold: #e7a323;
+
+  --color-primary: var(--brand-maroon);
+  --color-primary-hover: #651515;
+  --color-primary-strong: #561111;
+  --color-primary-soft: #f6e9e7;
+  --color-primary-text: #7a1b1b;
+  --color-on-primary: #ffffff;
+  --color-on-primary-muted: #f1d5d1;
+
+  --color-secondary: var(--brand-navy);
+  --color-secondary-soft: #e9ebf6;
+  --color-secondary-text: #2a367d;
+  --color-on-secondary: #ffffff;
+
+  --color-accent: var(--brand-gold);
+  --color-accent-hover: #d69417;
+  --color-accent-soft: #fbf0d9;
+  --color-on-accent: #3d2900;
+
+  --color-bg: #f7f5f2;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2efeb;
+  --color-surface-sunken: #ebe7e2;
+  --color-border: #e5dfd8;
+  --color-border-strong: #cfc7be;
+  --color-text: #1f1b19;
+  --color-text-muted: #645d57;
+  --color-text-subtle: #8a827b;
+
+  --color-success: #1d6f47;
+  --color-success-soft: #e3f2ea;
+  --color-warning: #8f5200;
+  --color-warning-soft: #fdf0dc;
+  --color-danger: #b0261d;
+  --color-danger-soft: #fbe7e5;
+  --color-ai: #2a367d;
+  --color-ai-soft: #eef0fa;
+
+  --focus-ring: 0 0 0 3px rgba(42, 54, 125, 0.35);
+
+  --font-sans:
+    'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --text-3xl: 34px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(40, 20, 15, 0.06);
+  --shadow-md: 0 4px 14px rgba(40, 20, 15, 0.08);
+  --shadow-lg: 0 12px 32px rgba(40, 20, 15, 0.12);
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --titlebar-height: 52px;
+  --sidebar-width: 224px;
+  --sidebar-collapsed-width: 64px;
+  --assistant-width: 392px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-primary: #8c2626;
+    --color-primary-hover: #a02e2e;
+    --color-primary-strong: #6e1b1b;
+    --color-primary-soft: #3a2224;
+    --color-primary-text: #f0aaa3;
+    --color-on-primary: #ffffff;
+    --color-on-primary-muted: #f0cfca;
+    --color-secondary: #3a4794;
+    --color-secondary-soft: #262b45;
+    --color-secondary-text: #b2bcf3;
+    --color-accent-soft: #3b2f17;
+    --color-bg: #141214;
+    --color-surface: #1d1a1d;
+    --color-surface-muted: #252125;
+    --color-surface-sunken: #2c272c;
+    --color-border: #363036;
+    --color-border-strong: #4a424a;
+    --color-text: #f3eeea;
+    --color-text-muted: #bcb2ab;
+    --color-text-subtle: #948a84;
+    --color-success: #7fd1a6;
+    --color-success-soft: #1d3329;
+    --color-warning: #f2bd6b;
+    --color-warning-soft: #3a2c16;
+    --color-danger: #ff9b92;
+    --color-danger-soft: #3d1f1d;
+    --color-ai: #b2bcf3;
+    --color-ai-soft: #22263d;
+    --focus-ring: 0 0 0 3px rgba(178, 188, 243, 0.45);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-primary: #8c2626;
+  --color-primary-hover: #a02e2e;
+  --color-primary-strong: #6e1b1b;
+  --color-primary-soft: #3a2224;
+  --color-primary-text: #f0aaa3;
+  --color-on-primary: #ffffff;
+  --color-on-primary-muted: #f0cfca;
+  --color-secondary: #3a4794;
+  --color-secondary-soft: #262b45;
+  --color-secondary-text: #b2bcf3;
+  --color-accent-soft: #3b2f17;
+  --color-bg: #141214;
+  --color-surface: #1d1a1d;
+  --color-surface-muted: #252125;
+  --color-surface-sunken: #2c272c;
+  --color-border: #363036;
+  --color-border-strong: #4a424a;
+  --color-text: #f3eeea;
+  --color-text-muted: #bcb2ab;
+  --color-text-subtle: #948a84;
+  --color-success: #7fd1a6;
+  --color-success-soft: #1d3329;
+  --color-warning: #f2bd6b;
+  --color-warning-soft: #3a2c16;
+  --color-danger: #ff9b92;
+  --color-danger-soft: #3d1f1d;
+  --color-ai: #b2bcf3;
+  --color-ai-soft: #22263d;
+  --focus-ring: 0 0 0 3px rgba(178, 188, 243, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}
