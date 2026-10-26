@@ -85,9 +85,13 @@ test('FS-03 Esc leaves page fullscreen and window fullscreen, with one change ev
   await pressKey(l, 'page', 'Escape');
   await expect.poll(async () => (await windowState(l)).fullscreen).toBe(false);
   expect((await windowState(l)).pageFullscreen).toBe(false);
-  const changes = (await probe(page)).filter((e) => e.type === 'fullscreenchange');
-  expect(changes.map((e) => e.fs)).toEqual([true, false]);
+  // The OS window can leave fullscreen a moment before the page gets its fullscreenchange event.
+  const fullscreenChanges = async () =>
+    (await probe(page)).filter((e) => e.type === 'fullscreenchange').map((e) => e.fs);
+  await expect.poll(fullscreenChanges).toEqual([true, false]);
+  expect(await page.evaluate(() => document.fullscreenElement === null)).toBe(true);
   await expect(l.ui.locator('.titlebar')).toBeVisible();
+  expect(await fullscreenChanges()).toEqual([true, false]);
 });
 
 test('FS-04 leaving page fullscreen returns to F11 fullscreen when the student was already in it', async () => {
