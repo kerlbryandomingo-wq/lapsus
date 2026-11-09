@@ -105,8 +105,10 @@ final class SophiaUITests: XCTestCase {
 
     func testBackAndForwardFollowPageHistory() {
         launchToPage()
-        app.webViews.buttons["Next page"].tap()
-        XCTAssertTrue(app.webViews.staticTexts["Page 2"].waitForExistence(timeout: 5))
+        let next = app.webViews.links["Next page"]
+        XCTAssertTrue(next.waitForExistence(timeout: 5), "the test page has a Next page link")
+        next.tap()
+        XCTAssertTrue(app.webViews.staticTexts["Page 2"].waitForExistence(timeout: 10), "the second page loads")
 
         swipeFromRightEdge()
         let back = app.buttons["control_back"]
