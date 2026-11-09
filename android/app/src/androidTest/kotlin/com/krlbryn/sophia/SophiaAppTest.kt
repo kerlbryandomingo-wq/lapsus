@@ -4,10 +4,8 @@ import android.content.ContentValues
 import android.graphics.Bitmap
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.click
@@ -23,6 +21,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.krlbryn.sophia.core.AdaptiveLayout
 import com.krlbryn.sophia.core.LayoutClass
 import org.junit.Rule
@@ -62,13 +61,17 @@ class SophiaAppTest {
         compose.onAllNodes(hasTestTag("webview") or hasTestTag("error_page")).fetchSemanticsNodes().isNotEmpty()
     }
 
-    /** Lets the page finish loading (up to 10 s) so screenshots show it, then saves one for review. */
+    /**
+     * Lets the page finish loading (up to 10 s) so screenshots show it, then saves one for review.
+     * Screenshots are a review aid, so a capture problem is logged rather than failing the test.
+     */
     private fun snapshot(name: String) {
         runCatching { compose.waitUntil(10_000) { compose.onAllNodes(hasTestTag("page_progress")).fetchSemanticsNodes().isEmpty() } }
         compose.waitForIdle()
-        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
-        // Saved to Download/sophia-screens through MediaStore so it survives the test app's uninstall.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        runCatching {
+            val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return
+            // Saved to Download/sophia-screens through MediaStore so it survives the test app's uninstall.
             val resolver = compose.activity.contentResolver
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, "$name.png")
@@ -78,7 +81,8 @@ class SophiaAppTest {
             resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)?.let { uri ->
                 resolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             }
-        }
+            bitmap.recycle()
+        }.onFailure { Log.w("SophiaAppTest", "Screenshot $name not saved", it) }
     }
 
     private fun openSettingsFromBrowser() {

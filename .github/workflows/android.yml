@@ -180,7 +180,7 @@ jobs:
           working-directory: android
           script: |
             adb shell rm -rf /sdcard/Download/sophia-screens || true
-            ./gradlew :app:connectedDebugAndroidTest; status=$?; adb pull /sdcard/Download/sophia-screens "$RUNNER_TEMP/screens" || true; exit $status
+            ./gradlew :app:connectedDebugAndroidTest; status=$?; adb pull /sdcard/Download/sophia-screens "$RUNNER_TEMP/screens" || true; if [ $status -ne 0 ]; then find app/build/outputs/androidTest-results -name '*.xml' -exec grep -A25 '<failure' {} + | head -150; adb logcat -d -b crash | tail -80; adb logcat -d | grep -E 'AndroidRuntime|FATAL|chromium.*crash|Process: com.krlbryn' | tail -60; fi; exit $status
 
       # Screenshots of the three browser states, on a single-commit branch per device, for design review.
       - name: Publish screenshots
