@@ -33,6 +33,11 @@ defaults:
     working-directory: ios
     shell: bash
 
+env:
+  # Simulator builds are signed ad hoc ("Sign to Run Locally"), which the Keychain needs. No team or
+  # certificate is involved. Device builds in the test job are unsigned.
+  SIM_SIGNING: CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
+
 jobs:
   test:
     name: Build and test (simulators)
@@ -70,7 +75,7 @@ jobs:
           set -o pipefail
           xcodebuild build-for-testing -project Sophia.xcodeproj -scheme Sophia -configuration Debug \
             -destination "id=$SIM_PRIMARY" -derivedDataPath "$RUNNER_TEMP/dd" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*Sophia/|BUILD (SUCCEEDED|FAILED)" || true
+            $SIM_SIGNING 2>&1 | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*Sophia/|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "TEST BUILD SUCCEEDED\|BUILD SUCCEEDED" "$RUNNER_TEMP/build.log" || { grep -B2 -A6 "error:" "$RUNNER_TEMP/build.log" | head -200; exit 1; }
 
       - name: Unit tests
@@ -79,7 +84,7 @@ jobs:
           xcodebuild test-without-building -project Sophia.xcodeproj -scheme Sophia \
             -destination "id=$SIM_PRIMARY" -derivedDataPath "$RUNNER_TEMP/dd" \
             -only-testing:SophiaTests -resultBundlePath "$RUNNER_TEMP/unit.xcresult" 2>&1 | tee "$RUNNER_TEMP/unit.log" | tail -40 \
-            || { grep -E "error:|failed|XCTAssert" "$RUNNER_TEMP/unit.log" | head -100; exit 1; }
+            || { grep -E "error:|failed|XCTAssert|Fatal error|crash|Restarting|signal|Test Case" "$RUNNER_TEMP/unit.log" | head -150; exit 1; }
 
       - name: UI tests on iPhone and iPad
         env:
@@ -92,7 +97,7 @@ jobs:
             "${dests[@]}" -derivedDataPath "$RUNNER_TEMP/dd" -only-testing:SophiaUITests \
             -maximum-concurrent-test-simulator-destinations 2 \
             -resultBundlePath "$RUNNER_TEMP/ui.xcresult" 2>&1 | tee "$RUNNER_TEMP/ui.log" | grep -E "Test Case|error:|Executed|TEST" | tail -120 \
-            || { grep -E "error:|failed|XCTAssert" "$RUNNER_TEMP/ui.log" | head -120; exit 1; }
+            || { grep -E "error:|failed|XCTAssert|Fatal error|crash|Restarting|signal" "$RUNNER_TEMP/ui.log" | head -150; exit 1; }
 
       - name: Device build (Release, unsigned)
         run: |
@@ -107,7 +112,7 @@ jobs:
           set -o pipefail
           xcodebuild build -project Sophia.xcodeproj -scheme Sophia -configuration Release \
             -destination "generic/platform=iOS Simulator" -derivedDataPath "$RUNNER_TEMP/dd-sim" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)"
+            $SIM_SIGNING 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)"
           mkdir -p "$RUNNER_TEMP/out"
           app="$(find "$RUNNER_TEMP/dd-sim/Build/Products" -name Sophia.app -maxdepth 3 | head -1)"
           version="$(grep -E '^MARKETING_VERSION' Config/Sophia.xcconfig | sed 's/.*= *//')"

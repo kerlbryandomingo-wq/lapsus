@@ -76,7 +76,9 @@ final class HistoryTests: XCTestCase {
     }
 
     func testPrunesOldestBeyondLimit() throws {
-        let context = SophiaStore.makeContainer(inMemory: true).mainContext
+        // Keep the container alive: a ModelContext doesn't retain it.
+        let container = SophiaStore.makeContainer(inMemory: true)
+        let context = container.mainContext
         let h = HistoryRecorder(context: context)
         for i in 0..<12 { h.record(url: "https://e.edu/\(i)", title: "\(i)", now: Date(timeIntervalSince1970: Double(i))) }
         h.prune(limit: 5)
@@ -211,7 +213,8 @@ final class AssistantModelTests: XCTestCase {
         guard case .answer(let answer) = m.phase else { return XCTFail("expected an answer, got \(m.phase)") }
         XCTAssertEqual(answer.title, "Mitosis")
 
-        let context = SophiaStore.makeContainer(inMemory: true).mainContext
+        let container = SophiaStore.makeContainer(inMemory: true)
+        let context = container.mainContext
         m.save(answer, in: context)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<SavedNote>()), 1)
     }
