@@ -30,3 +30,7 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
 -dontwarn kotlin.reflect.jvm.internal.**
+
+# Used only by the SDK's class-to-schema helpers, which Sophia doesn't call (it passes a JSON schema).
+# Android doesn't ship this JDK type.
+-dontwarn java.lang.reflect.AnnotatedType
