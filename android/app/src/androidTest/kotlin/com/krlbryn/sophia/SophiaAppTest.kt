@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebView
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
@@ -24,6 +27,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.krlbryn.sophia.core.AdaptiveLayout
 import com.krlbryn.sophia.core.LayoutClass
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,17 +60,43 @@ class SophiaAppTest {
     private fun swipeFromRightEdge() =
         compose.onNodeWithTag("browser_content").performTouchInput { swipeLeft(startX = right - 8f, endX = right - width * 0.7f, durationMillis = 200) }
 
-    /** The page has started: either the WebView or (offline) Sophia's error page is showing. */
-    private fun awaitPage() = compose.waitUntil(15_000) {
-        compose.onAllNodes(hasTestTag("webview") or hasTestTag("error_page")).fetchSemanticsNodes().isNotEmpty()
+    /**
+     * The page has started: either the WebView or (offline) Sophia's error page is showing.
+     *
+     * The live portal can animate without end, which keeps the main thread drawing frames, and
+     * Espresso then never sees the app idle. Once the page has loaded (or 15 s have passed), the
+     * test pauses the page's animations and timers so the checks below can synchronise. This only
+     * happens inside the test; the app itself is unchanged.
+     */
+    private fun awaitPage() {
+        compose.waitUntil(15_000) {
+            compose.onAllNodes(hasTestTag("webview") or hasTestTag("error_page")).fetchSemanticsNodes().isNotEmpty()
+        }
+        runCatching { compose.waitUntil(15_000) { compose.onAllNodes(hasTestTag("page_progress")).fetchSemanticsNodes().isEmpty() } }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            webViewsIn(compose.activity.window.decorView).forEach { it.onPause(); it.pauseTimers() }
+        }
+    }
+
+    /** WebView timers are process-wide, so give the next test running pages again. */
+    @After
+    fun resumePageTimers() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            runCatching { webViewsIn(compose.activity.window.decorView).forEach { it.resumeTimers() } }
+        }
+    }
+
+    private fun webViewsIn(view: View): List<WebView> = when (view) {
+        is WebView -> listOf(view)
+        is ViewGroup -> (0 until view.childCount).flatMap { webViewsIn(view.getChildAt(it)) }
+        else -> emptyList()
     }
 
     /**
-     * Lets the page finish loading (up to 10 s) so screenshots show it, then saves one for review.
+     * Saves a screenshot of the current state for review.
      * Screenshots are a review aid, so a capture problem is logged rather than failing the test.
      */
     private fun snapshot(name: String) {
-        runCatching { compose.waitUntil(10_000) { compose.onAllNodes(hasTestTag("page_progress")).fetchSemanticsNodes().isEmpty() } }
         compose.waitForIdle()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         runCatching {
