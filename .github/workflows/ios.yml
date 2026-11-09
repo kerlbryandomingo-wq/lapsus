@@ -99,6 +99,21 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/ui.xcresult" 2>&1 | tee "$RUNNER_TEMP/ui.log" | grep -E "Test Case|error:|Executed|TEST" | tail -120 \
             || { grep -E "error:|failed|XCTAssert|Fatal error|crash|Restarting|signal" "$RUNNER_TEMP/ui.log" | head -150; exit 1; }
 
+      - name: Explain test failures
+        if: failure()
+        run: |
+          for r in "$RUNNER_TEMP"/unit.xcresult "$RUNNER_TEMP"/ui.xcresult; do
+            [ -d "$r" ] || continue
+            echo "== $(basename "$r")"
+            xcrun xcresulttool get test-results summary --path "$r" --compact > "$RUNNER_TEMP/summary.json" 2>/dev/null || continue
+            python3 -c "
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          for f in d.get('testFailures', []):
+              print('FAIL', f.get('testIdentifierString') or f.get('testName'), '|', f.get('targetName', ''), '|', (f.get('failureText') or '').strip())
+          " "$RUNNER_TEMP/summary.json"
+          done
+
       - name: Device build (Release, unsigned)
         run: |
           set -o pipefail

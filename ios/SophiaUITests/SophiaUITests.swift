@@ -13,8 +13,29 @@ final class SophiaUITests: XCTestCase {
     }
 
     override func tearDown() {
+        // A picture of the screen at the moment a test failed makes CI failures readable.
+        if let run = testRun, run.failureCount > 0, app != nil, app.state == .runningForeground {
+            let test = name.components(separatedBy: " ").last?.trimmingCharacters(in: CharacterSet(charactersIn: "]")) ?? "test"
+            Screenshots.save(app, "failed-\(test)")
+        }
         XCUIDevice.shared.orientation = .portrait
         super.tearDown()
+    }
+
+    /// Waits until the element exists and its enabled state matches.
+    @discardableResult
+    private func waitUntil(_ element: XCUIElement, enabled: Bool, timeout: TimeInterval = 5) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.exists && element.isEnabled == enabled { return true }
+            usleep(200_000)
+        }
+        return element.exists && element.isEnabled == enabled
+    }
+
+    /// Taps the page area beside an open panel, which closes it.
+    private func tapBesidePanel(_ side: CGFloat) {
+        app.coordinate(withNormalizedOffset: CGVector(dx: side, dy: 0.5)).tap()
     }
 
     private func launchToPage() {
@@ -71,11 +92,11 @@ final class SophiaUITests: XCTestCase {
         XCTAssertTrue(app.buttons["control_reload"].isEnabled)
         Screenshots.save(app, "3-right-panel")
 
-        // Swiping the panel back toward its edge closes it.
-        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5))
-        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 1.0, dy: 0.5)).withOffset(CGVector(dx: 40, dy: 0))
+        // Swiping the panel back toward its edge closes it. The drag starts on the panel's empty lower part.
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.86, dy: 0.88))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.995, dy: 0.88))
         from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .fast, thenHoldForDuration: 0)
-        XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5))
+        XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5), "dragging the panel toward its edge closes it")
     }
 
     func testBackAndForwardFollowPageHistory() {
@@ -85,14 +106,17 @@ final class SophiaUITests: XCTestCase {
 
         swipeFromRightEdge()
         let back = app.buttons["control_back"]
-        XCTAssertTrue(back.waitForExistence(timeout: 5))
-        XCTAssertTrue(back.isEnabled)
+        XCTAssertTrue(back.waitForExistence(timeout: 5), "the controls panel opens")
+        XCTAssertTrue(waitUntil(back, enabled: true), "Back is available after a page change")
         back.tap()
-        XCTAssertTrue(app.webViews.staticTexts["Page 1"].waitForExistence(timeout: 5))
         let forward = app.buttons["control_forward"]
-        XCTAssertTrue(forward.isEnabled)
+        XCTAssertTrue(waitUntil(forward, enabled: true), "Forward is available after going back")
+        XCTAssertTrue(waitUntil(back, enabled: false), "Back is unavailable on the first page")
         forward.tap()
-        XCTAssertTrue(app.webViews.staticTexts["Page 2"].waitForExistence(timeout: 5))
+        XCTAssertTrue(waitUntil(back, enabled: true), "Back is available again after going forward")
+        tapBesidePanel(0.2)
+        XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5))
+        XCTAssertTrue(app.webViews.staticTexts["Page 2"].waitForExistence(timeout: 5), "the page shows the second entry")
     }
 
     func testSettingsOpenFromControls() {
@@ -120,10 +144,11 @@ final class SophiaUITests: XCTestCase {
         swipeFromLeftEdge()
         XCTAssertTrue(addressPanel.waitForExistence(timeout: 5))
         Screenshots.save(app, "5-landscape-left-panel")
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
-        XCTAssertTrue(addressPanel.waitToDisappear(timeout: 5))
+        tapBesidePanel(0.9)
+        XCTAssertTrue(addressPanel.waitToDisappear(timeout: 5), "tapping beside the panel closes it in landscape")
+        sleep(1)
         swipeFromRightEdge()
-        XCTAssertTrue(controlsPanel.waitForExistence(timeout: 5))
+        XCTAssertTrue(controlsPanel.waitForExistence(timeout: 5), "the right edge swipe works in landscape")
         Screenshots.save(app, "6-landscape-right-panel")
     }
 
@@ -138,11 +163,25 @@ final class SophiaUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         editor.tap()
         editor.typeText("Photosynthesis turns light into chemical energy. Contact me at test@example.com")
-        app.buttons["assistant_review"].tap()
+        // On iPhone the button sits below the editor, under the keyboard. Scroll it into view.
+        let review = app.buttons["assistant_review"]
+        var tries = 0
+        while !(review.exists && review.isHittable) && tries < 6 {
+            app.swipeUp()
+            tries += 1
+        }
+        XCTAssertTrue(review.isHittable, "the review button can be reached")
+        review.tap()
         let reviewText = app.staticTexts["assistant_review_text"]
         XCTAssertTrue(reviewText.waitForExistence(timeout: 5))
         XCTAssertFalse(reviewText.label.contains("test@example.com"), "contact details are removed before sending")
-        app.buttons["assistant_send"].tap()
+        let send = app.buttons["assistant_send"]
+        tries = 0
+        while !(send.exists && send.isHittable) && tries < 4 {
+            app.swipeUp()
+            tries += 1
+        }
+        send.tap()
         XCTAssertTrue(app.staticTexts["answer_title"].waitForExistence(timeout: 10))
         Screenshots.save(app, "7-assistant-answer")
     }

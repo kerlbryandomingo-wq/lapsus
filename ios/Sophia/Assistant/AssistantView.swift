@@ -113,6 +113,13 @@ private struct InputPane: View {
                 Text("Use the Study Assistant to understand your lessons. Don't use it during graded or monitored assessments; follow your course's rules.")
             }
         }
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { editing = false }
+            }
+        }
     }
 }
 
