@@ -100,25 +100,26 @@ private struct InputPane: View {
                     .lineLimit(1...3)
             }
             Section {
-                Button {
-                    editing = false
-                    model.review()
-                } label: {
-                    Label("Review before sending", systemImage: "eye").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!model.canReview)
-                .accessibilityIdentifier("assistant_review")
             } footer: {
                 Text("Use the Study Assistant to understand your lessons. Don't use it during graded or monitored assessments; follow your course's rules.")
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { editing = false }
+        // The review button stays above the keyboard, so it can always be reached.
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                editing = false
+                model.review()
+            } label: {
+                Label("Review before sending", systemImage: "eye").frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(!model.canReview)
+            .accessibilityIdentifier("assistant_review")
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.bar)
         }
     }
 }

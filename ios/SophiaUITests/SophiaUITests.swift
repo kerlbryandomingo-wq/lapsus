@@ -18,6 +18,8 @@ final class SophiaUITests: XCTestCase {
             let test = name.components(separatedBy: " ").last?.trimmingCharacters(in: CharacterSet(charactersIn: "]")) ?? "test"
             Screenshots.save(app, "failed-\(test)")
         }
+        // Ending the app here keeps the next launch from having to stop a busy instance.
+        if app != nil, app.state != .notRunning { app.terminate() }
         XCUIDevice.shared.orientation = .portrait
         super.tearDown()
     }
@@ -163,21 +165,17 @@ final class SophiaUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         editor.tap()
         editor.typeText("Photosynthesis turns light into chemical energy. Contact me at test@example.com")
-        // On iPhone the button sits below the editor, under the keyboard. Scroll it into view.
+        // The review button stays above the keyboard.
         let review = app.buttons["assistant_review"]
-        var tries = 0
-        while !(review.exists && review.isHittable) && tries < 6 {
-            app.swipeUp()
-            tries += 1
-        }
-        XCTAssertTrue(review.isHittable, "the review button can be reached")
+        XCTAssertTrue(review.waitForExistence(timeout: 5) && review.isHittable, "the review button can be reached")
         review.tap()
         let reviewText = app.staticTexts["assistant_review_text"]
         XCTAssertTrue(reviewText.waitForExistence(timeout: 5))
         XCTAssertFalse(reviewText.label.contains("test@example.com"), "contact details are removed before sending")
         let send = app.buttons["assistant_send"]
-        tries = 0
-        while !(send.exists && send.isHittable) && tries < 4 {
+        var tries = 0
+        XCTAssertTrue(send.waitForExistence(timeout: 5), "the review screen shows a Send button")
+        while !send.isHittable && tries < 4 {
             app.swipeUp()
             tries += 1
         }

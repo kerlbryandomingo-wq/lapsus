@@ -176,7 +176,17 @@ final class BrowserModel {
             m.title = v ?? ""
             m.history?.updateTitle(url: m.url, title: m.title)
         }
-        on(\.url) { m, v in if let s = v?.absoluteString { m.url = s } }
+        on(\.url) { m, v in
+            if let s = v?.absoluteString { m.url = s }
+            m.syncNavigationState() // same-document changes (pushState, #fragments) move the URL too
+        }
+    }
+
+    /// Reads Back and Forward availability straight from the web view. KVO covers most changes; this
+    /// also catches same-document history entries and runs whenever the controls are about to show.
+    func syncNavigationState() {
+        if canGoBack != webView.canGoBack { canGoBack = webView.canGoBack }
+        if canGoForward != webView.canGoForward { canGoForward = webView.canGoForward }
     }
 
     // MARK: Navigation
@@ -278,6 +288,7 @@ final class BrowserModel {
     }
 
     func show(_ state: PanelState, focusAddress: Bool = false) {
+        if state == .controls { syncNavigationState() }
         withAnimation(.snappy(duration: 0.28)) {
             drag = nil
             panel = state
@@ -292,6 +303,7 @@ final class BrowserModel {
     func beginDrag(side: PanelSide, startingOpen: Bool) {
         let state: PanelState = side == .left ? .address : .controls
         if startingOpen && panel != state { return }
+        if state == .controls { syncNavigationState() }
         drag = PanelDrag(panel: state, side: side, startingOpen: startingOpen, progress: startingOpen ? 1 : 0)
     }
 
@@ -311,7 +323,7 @@ final class BrowserModel {
 
     func didStartNavigation() { loadError = nil }
 
-    func didCommit() { hasCommitted = true }
+    func didCommit() { hasCommitted = true; syncNavigationState() }
 
     func didFinish() {
         hasCommitted = true
