@@ -8,12 +8,13 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.click
+import androidx.compose.ui.geometry.Offset
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.krlbryn.sophia.core.AdaptiveLayout
 import com.krlbryn.sophia.core.LayoutClass
@@ -73,20 +74,27 @@ class SophiaAppTest {
     @Test
     fun swipesRevealTheGesturePanels() {
         goTo("Browser")
-        compose.onRoot().performTouchInput { swipeLeft(startX = right - 40f, endX = left + 40f, durationMillis = 200) }
+        // Swipes are made inside the page area, not across the navigation drawer or rail.
+        val content = compose.onNodeWithTag("browser_content")
+        content.performTouchInput { swipeLeft(startX = right - 40f, endX = left + 40f, durationMillis = 200) }
         compose.waitForIdle()
         compose.onNodeWithTag("nav_controls").assertExists()
         // A new tab has no history, so Back and Forward are disabled.
         compose.onNode(hasText("Back") and hasAnyAncestor(hasTestTag("nav_controls"))).assertIsNotEnabled()
 
         // Swiping back toward the centre closes it; swiping right then opens the portal panel.
-        compose.onRoot().performTouchInput { swipeRight(startX = left + 40f, endX = right - 40f, durationMillis = 200) }
+        compose.onNodeWithTag("controls_scrim").performTouchInput { swipeRight(startX = left + 40f, endX = right - 40f, durationMillis = 200) }
         compose.waitForIdle()
         compose.onNodeWithTag("nav_controls").assertDoesNotExist()
-        compose.onRoot().performTouchInput { swipeRight(startX = left + 40f, endX = right - 40f, durationMillis = 200) }
+        content.performTouchInput { swipeRight(startX = left + 40f, endX = right - 40f, durationMillis = 200) }
         compose.waitForIdle()
         compose.onNodeWithTag("bookmark_controls").assertExists()
         compose.onNodeWithTag("builtin_discipulus").assertExists()
+
+        // Tapping the page outside the panel dismisses it.
+        compose.onNodeWithTag("controls_scrim").performTouchInput { click(Offset(right - 20f, top + 20f)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag("bookmark_controls").assertDoesNotExist()
     }
 
     @Test

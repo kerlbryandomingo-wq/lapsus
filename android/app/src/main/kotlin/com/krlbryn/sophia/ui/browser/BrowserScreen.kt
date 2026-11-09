@@ -181,6 +181,7 @@ fun BrowserScreen(browser: BrowserViewModel, layout: LayoutClass, actions: AppAc
                 Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .testTag("browser_content")
                     .semantics {
                         // Alternatives to the swipe gestures for TalkBack and Switch Access users.
                         customActions = listOf(
