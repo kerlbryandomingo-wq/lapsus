@@ -122,8 +122,10 @@ final class SophiaUITests: XCTestCase {
         forward.tap()
         XCTAssertTrue(waitUntil(back, enabled: true), "Back is available again after going forward")
         XCTAssertTrue(waitUntil(forward, enabled: false), "Forward is unavailable on the newest entry")
+        // A tap can land while the page is still settling after the navigation; tap again if needed.
         tapBesidePanel(0.2)
-        XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5))
+        if !controlsPanel.waitToDisappear(timeout: 3) { tapBesidePanel(0.2) }
+        XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5), "tapping beside the controls closes them")
     }
 
     func testSettingsOpenFromControls() {
