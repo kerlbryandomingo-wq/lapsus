@@ -121,6 +121,14 @@ jobs:
             -destination "generic/platform=iOS" -derivedDataPath "$RUNNER_TEMP/dd-device" \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/device.log" | grep -E "error:|BUILD (SUCCEEDED|FAILED)" \
             || { grep -B2 -A6 "error:" "$RUNNER_TEMP/device.log" | head -100; exit 1; }
+          # An unsigned .ipa for sideloading tools (such as Sideloadly or AltStore), which sign it with the
+          # student's own Apple ID on their computer. It cannot be installed as it is.
+          app="$(find "$RUNNER_TEMP/dd-device/Build/Products" -name Sophia.app -maxdepth 3 | head -1)"
+          version="$(grep -E '^MARKETING_VERSION' Config/Sophia.xcconfig | sed 's/.*= *//')"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/out"
+          cp -R "$app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$RUNNER_TEMP/out/Sophia-$version-unsigned.ipa" Payload)
+          ls -la "$RUNNER_TEMP/out"
 
       - name: Simulator app (Release)
         run: |
@@ -147,6 +155,19 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -qm "iOS screenshots from ${{ github.event.pull_request.head.sha }}"
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" sophia-ios-screens
+
+      - name: Publish the unsigned .ipa to the sophia-ios-ipa branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}/out
+        run: |
+          ls ./*.ipa >/dev/null 2>&1 || exit 0
+          git init -q -b sophia-ios-ipa
+          git add -f ./*.ipa
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "Unsigned iOS build from ${{ github.event.pull_request.head.sha }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" sophia-ios-ipa
 
       - uses: actions/upload-artifact@v4
         with:

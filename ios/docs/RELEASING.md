@@ -104,3 +104,16 @@ Simulator tests can't cover everything. On at least one iPhone and one iPad:
 - [ ] Study Assistant with your own OpenAI or Anthropic key: review screen, answer, copy, save.
 - [ ] VoiceOver: open both panels with the rotor actions.
 - [ ] Background the app for an hour and return; the session should still be signed in.
+
+## Trying Sophia on your own iPhone or iPad from Windows (no paid account)
+
+CI builds an unsigned `Sophia-<version>-unsigned.ipa` (artifact `sophia-ios-simulator`, and on pull requests the
+`sophia-ios-ipa` branch). It cannot be installed as it is. A sideloading tool signs it with your own Apple ID:
+
+1. On the PC, install iTunes and iCloud from apple.com (not the Microsoft Store versions), then Sideloadly.
+2. Connect the device by cable and tap Trust. On the device, turn on Settings › Privacy & Security › Developer Mode.
+3. In Sideloadly, choose the .ipa, enter your Apple ID and press Start. On the device, allow the developer profile in
+   Settings › General › VPN & Device Management.
+
+With a free Apple ID the install lasts 7 days and up to 3 sideloaded apps can be active. For anything longer, use
+TestFlight as described above.
