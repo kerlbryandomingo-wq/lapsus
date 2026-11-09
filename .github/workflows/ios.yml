@@ -1,0 +1,254 @@
+name: Sophia for iOS
+
+on:
+  push:
+    branches: [main]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+    inputs:
+      all_devices:
+        description: "Also run UI tests on a small iPhone and an iPad mini"
+        type: boolean
+        default: false
+      release:
+        description: "Archive a signed build (needs the App Store Connect secrets in ios/docs/RELEASING.md)"
+        type: boolean
+        default: false
+      upload_testflight:
+        description: "Upload the signed build to TestFlight"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ios
+    shell: bash
+
+env:
+  # Simulator builds are signed ad hoc ("Sign to Run Locally"), which the Keychain needs. No team or
+  # certificate is involved. Device builds in the test job are unsigned.
+  SIM_SIGNING: CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
+
+jobs:
+  test:
+    name: Build and test (simulators)
+    runs-on: macos-latest
+    timeout-minutes: 75
+    permissions:
+      contents: write # only used to publish screenshots to the sophia-ios-screens branch
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest stable Xcode
+        run: |
+          xcode="$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -viE 'beta|rc' | sort -V | tail -1)"
+          if [ -n "$xcode" ]; then sudo xcode-select -s "$xcode"; fi
+          xcodebuild -version
+          swift --version
+          xcrun simctl list runtimes | grep -i ios || true
+
+      - name: Shared logic tests (SophiaKit)
+        working-directory: ios/SophiaKit
+        run: swift test
+
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen >/dev/null
+          xcodegen generate
+
+      - name: Choose simulators
+        run: |
+          python3 scripts/pick_simulators.py "${{ inputs.all_devices && 'all' || 'default' }}" >> "$GITHUB_ENV"
+          cat "$GITHUB_ENV" | grep '^SIM_' || true
+
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing -project Sophia.xcodeproj -scheme Sophia -configuration Debug \
+            -destination "id=$SIM_PRIMARY" -derivedDataPath "$RUNNER_TEMP/dd" \
+            $SIM_SIGNING 2>&1 | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*Sophia/|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "TEST BUILD SUCCEEDED\|BUILD SUCCEEDED" "$RUNNER_TEMP/build.log" || { grep -B2 -A6 "error:" "$RUNNER_TEMP/build.log" | head -200; exit 1; }
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building -project Sophia.xcodeproj -scheme Sophia \
+            -destination "id=$SIM_PRIMARY" -derivedDataPath "$RUNNER_TEMP/dd" \
+            -only-testing:SophiaTests -resultBundlePath "$RUNNER_TEMP/unit.xcresult" 2>&1 | tee "$RUNNER_TEMP/unit.log" | tail -40 \
+            || { grep -E "error:|failed|XCTAssert|Fatal error|crash|Restarting|signal|Test Case" "$RUNNER_TEMP/unit.log" | head -150; exit 1; }
+
+      - name: Device build (Release, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild build -project Sophia.xcodeproj -scheme Sophia -configuration Release \
+            -destination "generic/platform=iOS" -derivedDataPath "$RUNNER_TEMP/dd-device" \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/device.log" | grep -E "error:|BUILD (SUCCEEDED|FAILED)" \
+            || { grep -B2 -A6 "error:" "$RUNNER_TEMP/device.log" | head -100; exit 1; }
+          # An unsigned .ipa for sideloading tools (such as Sideloadly or AltStore), which sign it with the
+          # student's own Apple ID on their computer. It cannot be installed as it is.
+          app="$(find "$RUNNER_TEMP/dd-device/Build/Products" -name Sophia.app -maxdepth 3 | head -1)"
+          version="$(grep -E '^MARKETING_VERSION' Config/Sophia.xcconfig | sed 's/.*= *//')"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/out"
+          cp -R "$app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$RUNNER_TEMP/out/Sophia-$version-unsigned.ipa" Payload)
+          ls -la "$RUNNER_TEMP/out"
+
+      # A failed test runs once more. The simulator sometimes cannot stop the previous app instance
+      # ("Failed to terminate ... :0") before a launch; a real failure fails both runs.
+      - name: UI tests on iPhone and iPad
+        env:
+          TEST_RUNNER_SOPHIA_SCREENSHOT_DIR: ${{ runner.temp }}/screens
+        run: |
+          set -o pipefail
+          dests=()
+          for id in $SIM_UI; do dests+=(-destination "id=$id"); done
+          xcodebuild test-without-building -project Sophia.xcodeproj -scheme Sophia \
+            "${dests[@]}" -derivedDataPath "$RUNNER_TEMP/dd" -only-testing:SophiaUITests \
+            -maximum-concurrent-test-simulator-destinations 1 \
+          -retry-tests-on-failure -test-iterations 2 \
+            -resultBundlePath "$RUNNER_TEMP/ui.xcresult" 2>&1 | tee "$RUNNER_TEMP/ui.log" | grep -E "Test Case|error:|Executed|TEST" | tail -120 \
+            || { grep -E "error:|failed|XCTAssert|Fatal error|crash|Restarting|signal" "$RUNNER_TEMP/ui.log" | head -150; exit 1; }
+
+      - name: Explain test failures
+        if: failure()
+        run: |
+          for r in "$RUNNER_TEMP"/unit.xcresult "$RUNNER_TEMP"/ui.xcresult; do
+            [ -d "$r" ] || continue
+            echo "== $(basename "$r")"
+            xcrun xcresulttool get test-results summary --path "$r" --compact > "$RUNNER_TEMP/summary.json" 2>/dev/null || continue
+            python3 -c "
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          for f in d.get('testFailures', []):
+              print('FAIL', f.get('testIdentifierString') or f.get('testName'), '|', f.get('targetName', ''), '|', (f.get('failureText') or '').strip())
+          " "$RUNNER_TEMP/summary.json"
+          done
+
+      - name: Simulator app (Release)
+        run: |
+          set -o pipefail
+          xcodebuild build -project Sophia.xcodeproj -scheme Sophia -configuration Release \
+            -destination "generic/platform=iOS Simulator" -derivedDataPath "$RUNNER_TEMP/dd-sim" \
+            $SIM_SIGNING 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)"
+          mkdir -p "$RUNNER_TEMP/out"
+          app="$(find "$RUNNER_TEMP/dd-sim/Build/Products" -name Sophia.app -maxdepth 3 | head -1)"
+          version="$(grep -E '^MARKETING_VERSION' Config/Sophia.xcconfig | sed 's/.*= *//')"
+          (cd "$(dirname "$app")" && ditto -c -k --keepParent Sophia.app "$RUNNER_TEMP/out/Sophia-$version-simulator.zip")
+          ls -la "$RUNNER_TEMP/out"
+
+      - name: Publish screenshots to the sophia-ios-screens branch
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          [ -d screens ] && ls screens/*.png >/dev/null 2>&1 || exit 0
+          cd screens
+          git init -q -b sophia-ios-screens
+          git add -f ./*.png
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "iOS screenshots from ${{ github.event.pull_request.head.sha }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" sophia-ios-screens
+
+      - name: Publish the unsigned .ipa to the sophia-ios-ipa branch
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}/out
+        run: |
+          ls ./*.ipa >/dev/null 2>&1 || exit 0
+          git init -q -b sophia-ios-ipa
+          git add -f ./*.ipa
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "Unsigned iOS build from ${{ github.event.pull_request.head.sha }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" sophia-ios-ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sophia-ios-simulator
+          path: ${{ runner.temp }}/out
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sophia-ios-test-results
+          path: |
+            ${{ runner.temp }}/*.xcresult
+            ${{ runner.temp }}/*.log
+            ${{ runner.temp }}/screens
+          if-no-files-found: ignore
+
+  release:
+    name: Signed archive and TestFlight
+    if: github.event_name == 'workflow_dispatch' && inputs.release
+    needs: test
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest stable Xcode
+        run: |
+          xcode="$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -viE 'beta|rc' | sort -V | tail -1)"
+          if [ -n "$xcode" ]; then sudo xcode-select -s "$xcode"; fi
+          xcodebuild -version
+
+      - name: Check signing secrets
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          missing=()
+          [ -n "$TEAM" ] || missing+=(APPLE_TEAM_ID)
+          [ -n "$KEY_ID" ] || missing+=(ASC_KEY_ID)
+          [ -n "$ISSUER" ] || missing+=(ASC_ISSUER_ID)
+          [ -n "$KEY" ] || missing+=(ASC_KEY_P8_BASE64)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing secrets: ${missing[*]}. See ios/docs/RELEASING.md."
+            exit 1
+          fi
+
+      - name: Archive with automatic (cloud) signing
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          set -o pipefail
+          brew install xcodegen >/dev/null
+          xcodegen generate
+          key="$RUNNER_TEMP/AuthKey.p8"
+          echo "$KEY" | base64 --decode > "$key"
+          build_number="${{ github.run_number }}"
+          xcodebuild archive -project Sophia.xcodeproj -scheme Sophia -configuration Release \
+            -destination "generic/platform=iOS" -archivePath "$RUNNER_TEMP/Sophia.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM" CURRENT_PROJECT_VERSION="$build_number" \
+            -allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" \
+            2>&1 | tail -30
+          sed -e "s/TEAM_ID/$TEAM/" -e "s/DESTINATION/${{ inputs.upload_testflight && 'upload' || 'export' }}/" \
+            ExportOptions.plist.template > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Sophia.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" \
+            2>&1 | tail -30
+          rm -f "$key"
+          ls -la "$RUNNER_TEMP/export" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sophia-ios-signed
+          path: ${{ runner.temp }}/export
+          if-no-files-found: ignore
