@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- In-app Sophia mark: the white "S" on a solid maroon circle, matching the launcher icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <path
+        android:fillColor="#7A1B1B"
+        android:pathData="M512,0 A512,512 0 1,1 511.9,0 Z" />
+    <path
+        android:pathData="M615.9,332 A120,120 0 1,0 512,512 A120,120 0 1,1 408.1,692"
+        android:strokeWidth="100"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+</vector>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sophia mark: a white stylised "S" centred on Sophia maroon, drawn in a 1024 grid and scaled into the
+     108dp adaptive-icon canvas (content stays inside the 66dp safe zone). Launchers mask the maroon
+     background into a circle. Original artwork; no AMA logo, no tagline. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.0703125"
+        android:scaleY="0.0703125"
+        android:translateX="18"
+        android:translateY="18">
+        <path
+            android:pathData="M615.9,332 A120,120 0 1,0 512,512 A120,120 0 1,1 408.1,692"
+            android:strokeWidth="100"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round" />
+    </group>
+</vector>

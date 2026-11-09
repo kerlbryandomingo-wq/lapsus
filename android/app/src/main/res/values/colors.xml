@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sophia_maroon">#7A1B1B</color>
+    <color name="sophia_maroon_dark">#5E1414</color>
+    <color name="sophia_navy">#2A367D</color>
+    <color name="sophia_gold">#E7A323</color>
+    <color name="sophia_background">#F7F5F2</color>
+    <color name="sophia_background_dark">#141214</color>
+    <color name="ic_launcher_background">#7A1B1B</color>
+</resources>
