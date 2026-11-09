@@ -18,6 +18,12 @@ final class SophiaUITests: XCTestCase {
             let test = name.components(separatedBy: " ").last?.trimmingCharacters(in: CharacterSet(charactersIn: "]")) ?? "test"
             Screenshots.save(app, "failed-\(test)")
         }
+        // Stop the app with the same handle that launched it. Otherwise the next test's launch has to
+        // find and stop it, which the simulator sometimes fails to do ("Failed to terminate").
+        if app != nil, app.state != .notRunning {
+            app.terminate()
+            _ = app.wait(for: .notRunning, timeout: 10)
+        }
         XCUIDevice.shared.orientation = .portrait
         super.tearDown()
     }
