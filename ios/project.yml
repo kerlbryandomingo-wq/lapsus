@@ -1,0 +1,117 @@
+# XcodeGen spec for Sophia for iOS and iPadOS. Generate the Xcode project with:
+#   brew install xcodegen && cd ios && xcodegen
+name: Sophia
+options:
+  bundleIdPrefix: com.krlbryn
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  groupSortPosition: top
+configFiles:
+  Debug: Config/Sophia.xcconfig
+  Release: Config/Sophia.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+packages:
+  SophiaKit:
+    path: SophiaKit
+targets:
+  Sophia:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sophia
+        excludes:
+          - "**/*.md"
+    dependencies:
+      - package: SophiaKit
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        ENABLE_PREVIEWS: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.krlbryn.sophia
+    info:
+      path: Sophia/Info.plist
+      properties:
+        CFBundleDisplayName: Sophia
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.education
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIViewControllerBasedStatusBarAppearance: true
+        # Downloads live in Documents/Downloads and show up in the Files app.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        # Asked only when a site (for example a video class) requests them, after Sophia's own prompt.
+        NSCameraUsageDescription: A website you're using in Sophia, such as an online class, wants to use the camera. Sophia asks you first for every site.
+        NSMicrophoneUsageDescription: A website you're using in Sophia, such as an online class, wants to use the microphone. Sophia asks you first for every site.
+        NSAppTransportSecurity:
+          # HTTPS only. Local networking is allowed for pages served from this device during development.
+          NSAllowsLocalNetworking: true
+  SophiaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [SophiaTests]
+    dependencies:
+      - target: Sophia
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.krlbryn.sophia.tests
+  SophiaUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [SophiaUITests]
+    dependencies:
+      - target: Sophia
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.krlbryn.sophia.uitests
+        TEST_TARGET_NAME: Sophia
+schemes:
+  Sophia:
+    build:
+      targets:
+        Sophia: all
+        SophiaTests: [test]
+        SophiaUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      coverageTargets: [Sophia]
+      targets:
+        - name: SophiaTests
+          parallelizable: false
+        - name: SophiaUITests
+          parallelizable: false
+    archive:
+      config: Release
