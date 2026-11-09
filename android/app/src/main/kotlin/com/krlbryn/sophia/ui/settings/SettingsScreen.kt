@@ -84,6 +84,7 @@ import com.krlbryn.sophia.data.repo.secretNameFor
 import com.krlbryn.sophia.data.settings.AccentColor
 import com.krlbryn.sophia.data.settings.AppSettings
 import com.krlbryn.sophia.data.settings.DownloadLocation
+import com.krlbryn.sophia.data.settings.PortalBookmark
 import com.krlbryn.sophia.data.settings.ResponseDetail
 import com.krlbryn.sophia.data.settings.ThemeMode
 import com.krlbryn.sophia.ui.components.BrandLockup
@@ -294,6 +295,13 @@ private fun BrowserSettings(s: AppSettings, vm: SettingsViewModel) {
     Group("Homepage")
     SaveField("Homepage address", s.homepage, vm::setHomepage, KeyboardType.Uri, tag = "homepage_field")
     Hint("Sophia opens this page from Home. It must use https://.")
+
+    Group("Bookmarks in the address panel")
+    Hint("AMA Discipulus is built in. Add the LMS and Aurora Login addresses your school uses; leave a field empty to clear it.")
+    PortalBookmark.entries.forEach { b ->
+        Spacer(Modifier.height(6.dp))
+        SaveField("${b.label} address", s.urlFor(b), { vm.setPortalBookmark(b, it) }, KeyboardType.Uri, tag = "bookmark_${b.name.lowercase()}_field")
+    }
 
     Group("Pages")
     ToggleRow("JavaScript", "Most portals, including AMA Discipulus, need this on.", s.javaScriptEnabled, vm::setJavaScript)

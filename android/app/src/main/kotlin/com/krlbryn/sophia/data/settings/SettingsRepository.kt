@@ -47,6 +47,8 @@ class SettingsRepository @Inject constructor(
         val compatibleModel = stringPreferencesKey("compatible_model")
         val compatibleBaseUrl = stringPreferencesKey("compatible_base_url")
         val responseDetail = stringPreferencesKey("response_detail")
+        val lmsUrl = stringPreferencesKey("bookmark_lms_url")
+        val auroraUrl = stringPreferencesKey("bookmark_aurora_url")
     }
 
     val settings: Flow<AppSettings> = store.data
@@ -81,6 +83,8 @@ class SettingsRepository @Inject constructor(
             compatibleModel = p[K.compatibleModel]?.takeIf(AiConfigValidation::isValidModel) ?: d.compatibleModel,
             compatibleBaseUrl = p[K.compatibleBaseUrl]?.let(AiConfigValidation::normalizeBaseUrl) ?: d.compatibleBaseUrl,
             responseDetail = enumOr(p[K.responseDetail], d.responseDetail),
+            lmsUrl = p[K.lmsUrl]?.let(UrlPolicy::validateHomepage) ?: d.lmsUrl,
+            auroraUrl = p[K.auroraUrl]?.let(UrlPolicy::validateHomepage) ?: d.auroraUrl,
         )
     }
 
@@ -136,6 +140,21 @@ class SettingsRepository @Inject constructor(
     suspend fun setCompatibleBaseUrl(raw: String): Boolean {
         val url = AiConfigValidation.normalizeBaseUrl(raw) ?: return false
         edit { it[K.compatibleBaseUrl] = url }
+        return true
+    }
+
+    /** Sets the address of a portal bookmark; blank clears it. Returns false when the address isn't secure. */
+    suspend fun setPortalBookmark(bookmark: PortalBookmark, raw: String): Boolean {
+        val key = when (bookmark) {
+            PortalBookmark.LMS -> K.lmsUrl
+            PortalBookmark.AURORA -> K.auroraUrl
+        }
+        if (raw.isBlank()) {
+            edit { it.remove(key) }
+            return true
+        }
+        val url = UrlPolicy.validateHomepage(raw) ?: return false
+        edit { it[key] = url }
         return true
     }
 

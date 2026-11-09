@@ -9,19 +9,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.krlbryn.sophia.browser.BrowserViewModel
 import com.krlbryn.sophia.browser.ControlsPanel
 import com.krlbryn.sophia.ui.navigation.SophiaApp
 import com.krlbryn.sophia.ui.theme.SophiaTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -36,22 +29,6 @@ class MainActivity : ComponentActivity() {
             val settings by browser.settings.collectAsStateWithLifecycle()
             SophiaTheme(themeMode = settings.themeMode, accent = settings.accent) {
                 SophiaApp(browser)
-            }
-        }
-
-        // Hide the system bars only while a page shows real fullscreen content (for example a video),
-        // and bring them back as soon as it ends. Swiping from the edge still reveals them.
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                browser.fullscreenView.collect { view ->
-                    val controller = WindowCompat.getInsetsController(window, window.decorView)
-                    if (view != null) {
-                        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                        controller.hide(WindowInsetsCompat.Type.systemBars())
-                    } else {
-                        controller.show(WindowInsetsCompat.Type.systemBars())
-                    }
-                }
             }
         }
 
@@ -105,6 +82,7 @@ class MainActivity : ComponentActivity() {
             ctrl && e.keyCode == KeyEvent.KEYCODE_R -> browser.reload()
             ctrl && e.keyCode == KeyEvent.KEYCODE_D -> browser.toggleBookmark()
             ctrl && e.keyCode == KeyEvent.KEYCODE_B -> { browser.showBrowser(); browser.showControls(ControlsPanel.BOOKMARKS) }
+            ctrl && e.keyCode == KeyEvent.KEYCODE_J -> { browser.showBrowser(); browser.showControls(ControlsPanel.NAVIGATION) }
             alt && e.keyCode == KeyEvent.KEYCODE_DPAD_LEFT -> browser.back()
             alt && e.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT -> browser.forward()
             e.keyCode == KeyEvent.KEYCODE_F5 -> browser.reload()

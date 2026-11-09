@@ -8,19 +8,20 @@ Made by **KRLBRYN**. Sophia is an independent student project and is not made or
 
 ## Features
 
-- **Home dashboard** with Open Discipulus (https://discipulusv2.amasystem.net/), your own portal shortcuts, recent pages, bookmarks and downloads.
+- **Opens straight into the portal.** Sophia launches into a fullscreen AMA Discipulus page (or your chosen homepage). Android's status and navigation bars are hidden in real immersive mode, and a swipe from the screen edge brings them back. There is no toolbar, tab bar or button over the page, and nothing dims or tints it. A thin maroon bar shows loading progress.
+- **Side panels** open with an edge swipe and close when you swipe them back toward their edge, tap the page beside them, or press Back:
+  - Swipe in from the **left edge** for the **address bar** (URL, search or address, Go) and **bookmarks**: Discipulus, LMS and Aurora Login, plus *Manage* and your open tabs. LMS and Aurora Login stay "Not set up" until you enter their addresses; Sophia never guesses them.
+  - Swipe in from the **right edge** for **Back, Forward, Reload and Settings**. Back and Forward are greyed out when there's nowhere to go.
+  - The panels are translucent grey, and the page behind them dims only while a panel is open.
+  - Swipes must start near an edge. Vertical scrolling, long-press text selection, pinch zoom, horizontally scrolling page areas, buttons and forms are left alone. Android's back gesture is held off a 200dp strip in the middle of each edge.
+  - Alternatives: TalkBack custom actions on the page, and keyboard shortcuts (Ctrl+L for the address bar, Ctrl+B for bookmarks, Ctrl+J for the controls).
 - **Secure browser** built on Android System WebView.
   - Plain `http://` pages ask first, and certificate errors are never bypassed.
   - Safe Browsing is on by default.
   - No JavaScript bridges, and nothing is injected into pages.
   - Pop-ups need a tap. Camera, microphone and location are never granted to websites.
-  - Tabs (up to 8), fullscreen video, file uploads, and an optional portal-only mode.
-- **Gesture navigation**. Pages get the whole screen on phones, and these work everywhere:
-  - Swipe **left** to reveal Back, Forward and Reload. Back and Forward are greyed out when there is nowhere to go.
-  - Swipe **right** to reveal the built-in **AMA Discipulus** bookmark and a link to all bookmarks.
-  - Swipe back toward the centre, tap the page, or press Back to close a panel.
-  - Swipes are ignored during vertical scrolling, text selection (long press), pinch, and inside horizontally scrolling page areas.
-  - Accessible alternatives: the ⋮ menu (*Navigation controls*, *Bookmarks panel*), TalkBack custom actions on the page, and keyboard shortcuts.
+  - Tabs (up to 8), fullscreen video, file uploads, CAPTCHA and sign-in pages work as normal, and an optional portal-only mode is available.
+- **Home dashboard** (from Settings → app navigation) with portal shortcuts, recent pages, bookmarks and downloads.
 - **Bookmarks** with folders and search.
   - AMA Discipulus is always pinned. It can't be edited, duplicated or removed, and clearing history doesn't touch it.
 - **History** with search, per-item delete and clear all.
@@ -31,11 +32,11 @@ Made by **KRLBRYN**. Sophia is an independent student project and is not made or
   - You review exactly what will be sent, after likely passwords, keys, emails and ID numbers are removed.
   - Saved notes stay on the device.
   - The assistant is for learning, not for graded or monitored assessments.
-- **Adaptive layout**. It follows the actual window size, so it handles rotation, split-screen, foldables and freeform windows.
+- **Adaptive layout**. It follows the actual window size, so it handles rotation, split-screen, foldables and freeform windows. The browser is fullscreen everywhere, and panels are wider on tablets. Outside the browser:
   - Phones get a bottom bar.
   - Large phones in landscape and small tablets get a navigation rail.
-  - Tablets get a permanent drawer, a persistent toolbar, a tab strip, a Study/Bookmarks/History side panel, and multi-column lists.
-- **Keyboard shortcuts**: Ctrl+L (address), Ctrl+T (new tab), Ctrl+W (close tab), Ctrl+R or F5 (reload), Ctrl+D (bookmark), Ctrl+B (portal panel), Alt+← and Alt+→ (back and forward).
+  - Tablets get a permanent drawer and multi-column lists.
+- **Keyboard shortcuts**: Ctrl+L (address), Ctrl+T (new tab), Ctrl+W (close tab), Ctrl+R or F5 (reload), Ctrl+D (bookmark), Ctrl+B (address and bookmarks panel), Ctrl+J (controls panel), Alt+← and Alt+→ (back and forward).
 
 What Sophia deliberately does **not** do:
 - It does not change its browser identity.

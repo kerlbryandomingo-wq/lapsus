@@ -57,6 +57,8 @@ internal class SwipeWatcher(private val webView: WebView, private val onSwipe: (
                         multiTouch = multiTouch,
                         longPress = longPress || (!moved && e.eventTime - downTime >= longPressMs),
                         pageScrolledHorizontally = abs(webView.scrollX - startScrollX) > touchSlop,
+                        startXPx = downX,
+                        widthPx = webView.width.toFloat(),
                     ),
                 )
                 if (direction != null) onSwipe(direction)

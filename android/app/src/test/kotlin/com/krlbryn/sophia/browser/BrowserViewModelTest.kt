@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -120,16 +121,35 @@ class BrowserViewModelTest {
         assertEquals(1, vm.tabs.value.size)
     }
 
+    /** Sophia opens straight into the browser on the portal; waits for that first tab. */
+    private suspend fun awaitStartTab() = withTimeout(5_000) { vm.tabs.first { it.isNotEmpty() } }
+
     @Test
-    fun linksFromOtherAppsMustBeHttps() {
-        vm.openFromIntent("http://discipulusv2.amasystem.net/")
-        assertTrue(vm.tabs.value.isEmpty())
-        vm.openFromIntent("https://discipulusv2.amasystem.net/course")
-        assertEquals(1, vm.tabs.value.size)
+    fun launchOpensThePortalDirectly() = runBlocking {
+        val tabs = awaitStartTab()
+        assertEquals(listOf("https://discipulusv2.amasystem.net/"), tabs.map { it.url })
+        assertEquals(ControlsPanel.NONE, vm.controlsPanel.value)
     }
 
     @Test
-    fun javascriptUrlsAreNeverOpened() {
+    fun linksFromOtherAppsMustBeHttps() = runBlocking {
+        awaitStartTab()
+        vm.openFromIntent("http://discipulusv2.amasystem.net/")
+        assertEquals(1, vm.tabs.value.size)
+        vm.openFromIntent("https://discipulusv2.amasystem.net/course")
+        assertEquals(2, vm.tabs.value.size)
+    }
+
+    @Test
+    fun portalBookmarksMustBeSecure() {
+        assertTrue(!vm.setPortalBookmark(com.krlbryn.sophia.data.settings.PortalBookmark.LMS, "http://lms.example.edu"))
+        assertTrue(vm.setPortalBookmark(com.krlbryn.sophia.data.settings.PortalBookmark.LMS, "https://lms.example.edu"))
+        assertTrue(vm.setPortalBookmark(com.krlbryn.sophia.data.settings.PortalBookmark.AURORA, ""))
+    }
+
+    @Test
+    fun javascriptUrlsAreNeverOpened() = runBlocking {
+        awaitStartTab()
         vm.open("javascript:alert(1)")
         assertTrue(vm.tabs.value.none { it.url.startsWith("javascript") })
     }
@@ -143,7 +163,8 @@ class BrowserViewModelTest {
     }
 
     @Test
-    fun closingTheLastTabLeavesNoActiveTab() {
+    fun closingTheLastTabLeavesNoActiveTab() = runBlocking {
+        awaitStartTab().forEach { vm.closeTab(it.id) }
         vm.newTab()
         val id = vm.activeTabId.value!!
         vm.closeTab(id)

@@ -38,6 +38,7 @@ import com.krlbryn.sophia.data.repo.DownloadsRepository
 import com.krlbryn.sophia.data.repo.EnqueueResult
 import com.krlbryn.sophia.data.repo.LibraryRepository
 import com.krlbryn.sophia.data.settings.AppSettings
+import com.krlbryn.sophia.data.settings.PortalBookmark
 import com.krlbryn.sophia.data.settings.DownloadLocation
 import com.krlbryn.sophia.data.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -150,6 +151,13 @@ class BrowserViewModel @Inject constructor(
         viewModelScope.launch {
             settings.collect { s -> webViews.values.forEach { applySettings(it, s) } }
         }
+        // Sophia opens straight into the browser, on the student's homepage (AMA Discipulus by default).
+        if (saved.isEmpty()) {
+            viewModelScope.launch {
+                val home = settingsRepository.current().homepage
+                if (_tabs.value.isEmpty()) open(home, newTab = true)
+            }
+        }
     }
 
     // region Tabs
@@ -227,6 +235,13 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun openPortal(newTab: Boolean = false) = open(SophiaConstants.DEFAULT_PORTAL_URL, newTab)
+
+    /** Saves the address of the LMS or Aurora Login bookmark. Returns false when it isn't a secure address. */
+    fun setPortalBookmark(bookmark: PortalBookmark, raw: String): Boolean {
+        if (raw.isNotBlank() && UrlPolicy.validateHomepage(raw) == null) return false
+        viewModelScope.launch { settingsRepository.setPortalBookmark(bookmark, raw) }
+        return true
+    }
 
     /** Brings the browser screen forward (keyboard shortcuts). */
     fun showBrowser() {

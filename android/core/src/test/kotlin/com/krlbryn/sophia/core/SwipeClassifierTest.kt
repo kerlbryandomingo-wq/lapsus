@@ -31,4 +31,28 @@ class SwipeClassifierTest {
         assertEquals(SwipeDirection.RIGHT, SwipeClassifier.classify(Touch(100f, 0f, 200, 1f)))
         assertNull(SwipeClassifier.classify(Touch(100f, 0f, 200, 3f)))
     }
+
+    // Phone 411dp wide: the edge zone is a fifth of the width (about 82dp).
+    private val w = 411 * d
+
+    @Test fun rightSwipeFromLeftEdgeOpens() =
+        assertEquals(SwipeDirection.RIGHT, SwipeClassifier.classify(Touch(150 * d, 0f, 250, d, startXPx = 20 * d, widthPx = w)))
+
+    @Test fun rightSwipeFromMiddleIsIgnored() =
+        assertNull(SwipeClassifier.classify(Touch(150 * d, 0f, 250, d, startXPx = 180 * d, widthPx = w)))
+
+    @Test fun leftSwipeFromRightEdgeOpens() =
+        assertEquals(SwipeDirection.LEFT, SwipeClassifier.classify(Touch(-150 * d, 0f, 250, d, startXPx = 395 * d, widthPx = w)))
+
+    @Test fun leftSwipeFromLeftHalfIsIgnored() =
+        assertNull(SwipeClassifier.classify(Touch(-150 * d, 0f, 250, d, startXPx = 200 * d, widthPx = w)))
+
+    @Test fun edgeZoneIsCappedOnTablets() {
+        val tablet = 1280f * 2f
+        assertEquals(160f * 2f, SwipeClassifier.edgeZonePx(tablet, 2f))
+        assertNull(SwipeClassifier.classify(Touch(200f * 2f, 0f, 250, 2f, startXPx = 200f * 2f, widthPx = tablet)))
+    }
+
+    @Test fun closingSwipesNeedNoEdge() =
+        assertEquals(SwipeDirection.LEFT, SwipeClassifier.classify(Touch(-150 * d, 0f, 250, d)))
 }

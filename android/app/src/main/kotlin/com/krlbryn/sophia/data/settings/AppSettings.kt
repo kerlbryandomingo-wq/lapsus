@@ -13,6 +13,9 @@ enum class DownloadLocation(val label: String, val detail: String) {
     APP_STORAGE("Sophia app storage", "Private to Sophia; removed when Sophia is uninstalled"),
 }
 
+/** The fixed bookmarks in the browser's left panel, after AMA Discipulus. */
+enum class PortalBookmark(val label: String) { LMS("LMS"), AURORA("Aurora Login") }
+
 enum class ResponseDetail(val label: String, val instruction: String) {
     BRIEF("Brief", "Keep the answer short and focused."),
     STANDARD("Standard", ""),
@@ -42,7 +45,15 @@ data class AppSettings(
     val compatibleModel: String = "",
     val compatibleBaseUrl: String = "",
     val responseDetail: ResponseDetail = ResponseDetail.STANDARD,
+    /** Addresses for the LMS and Aurora Login bookmarks. Empty until the student sets them up. */
+    val lmsUrl: String = "",
+    val auroraUrl: String = "",
 ) {
+    fun urlFor(bookmark: PortalBookmark): String = when (bookmark) {
+        PortalBookmark.LMS -> lmsUrl
+        PortalBookmark.AURORA -> auroraUrl
+    }
+
     fun modelFor(provider: AiProviderId): String = when (provider) {
         AiProviderId.OPENAI -> openAiModel
         AiProviderId.ANTHROPIC -> anthropicModel

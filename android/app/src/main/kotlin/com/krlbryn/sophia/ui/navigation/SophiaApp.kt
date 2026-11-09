@@ -1,5 +1,13 @@
 package com.krlbryn.sophia.ui.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.BackHandler
 import android.content.ActivityNotFoundException
 import android.view.View
@@ -138,7 +146,6 @@ fun SophiaApp(browser: BrowserViewModel) {
     val clipboard = LocalClipboardManager.current
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val toolbarVisible by browser.toolbarVisible.collectAsStateWithLifecycle()
     val fullscreenView by browser.fullscreenView.collectAsStateWithLifecycle()
     var linkMenu by remember { mutableStateOf<BrowserEvent.LinkMenu?>(null) }
     var pendingFileCallback by remember { mutableStateOf<BrowserEvent.ChooseFiles?>(null) }
@@ -190,9 +197,10 @@ fun SophiaApp(browser: BrowserViewModel) {
 
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         val layout = AdaptiveLayout.classify(maxWidth.value, maxHeight.value)
-        val inBrowser = currentRoute == Destination.BROWSER.route
+        val inBrowser = currentRoute == null || currentRoute == Destination.BROWSER.route
+        ImmersiveMode(enabled = inBrowser || fullscreenView != null)
         val content: @Composable (Modifier) -> Unit = { modifier ->
-            NavHost(nav, startDestination = Destination.HOME.route, modifier = modifier) {
+            NavHost(nav, startDestination = Destination.BROWSER.route, modifier = modifier) {
                 composable(Destination.HOME.route) { HomeScreen(layout, actions, browser) }
                 composable(Destination.BROWSER.route) { BrowserScreen(browser, layout, actions) }
                 composable(Destination.BOOKMARKS.route) { LibraryScreen(LibraryTab.BOOKMARKS, layout, actions) }
@@ -209,7 +217,7 @@ fun SophiaApp(browser: BrowserViewModel) {
                 snackbarHost = { SnackbarHost(snackbar) },
                 bottomBar = {
                     AnimatedVisibility(
-                        visible = !inBrowser || toolbarVisible,
+                        visible = !inBrowser,
                         enter = expandVertically(),
                         exit = shrinkVertically(),
                     ) {
@@ -227,17 +235,21 @@ fun SophiaApp(browser: BrowserViewModel) {
                 },
             ) { inner ->
                 content(
-                    Modifier
-                        .padding(inner)
-                        .consumeWindowInsets(inner)
-                        .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-                        .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal)),
+                    if (inBrowser) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier
+                            .padding(inner)
+                            .consumeWindowInsets(inner)
+                            .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
+                            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                    },
                 )
             }
 
             LayoutClass.MEDIUM -> Scaffold(contentWindowInsets = WindowInsets(0), snackbarHost = { SnackbarHost(snackbar) }) { inner ->
                 Row(Modifier.padding(inner).fillMaxSize()) {
-                    NavigationRail(
+                    if (!inBrowser) NavigationRail(
                         modifier = Modifier.testTag("nav_rail"),
                         header = { BrandLockup(showWordmark = false, modifier = Modifier.padding(vertical = 8.dp)) },
                     ) {
@@ -251,11 +263,15 @@ fun SophiaApp(browser: BrowserViewModel) {
                         }
                     }
                     content(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
-                            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.End)),
+                        if (inBrowser) {
+                            Modifier.weight(1f).fillMaxHeight()
+                        } else {
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
+                                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.End))
+                        },
                     )
                 }
             }
@@ -264,7 +280,7 @@ fun SophiaApp(browser: BrowserViewModel) {
                 PermanentNavigationDrawer(
                     modifier = Modifier.padding(inner),
                     drawerContent = {
-                        PermanentDrawerSheet(
+                        if (!inBrowser) PermanentDrawerSheet(
                             Modifier.width(248.dp).testTag("nav_drawer"),
                             drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
@@ -288,10 +304,14 @@ fun SophiaApp(browser: BrowserViewModel) {
                     },
                 ) {
                     content(
-                        Modifier
-                            .fillMaxSize()
-                            .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
-                            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.End)),
+                        if (inBrowser) {
+                            Modifier.fillMaxSize()
+                        } else {
+                            Modifier
+                                .fillMaxSize()
+                                .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
+                                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.End))
+                        },
                     )
                 }
             }
@@ -362,3 +382,33 @@ private fun FullscreenHost(view: View) {
         )
     }
 }
+
+/**
+ * Real Android immersive mode while browsing or showing a page's fullscreen video: the status and
+ * navigation bars are hidden, and a swipe from the screen edge brings them back for a moment.
+ * Nothing about this is reported to web pages; they see the window size Android gives them.
+ */
+@Composable
+private fun ImmersiveMode(enabled: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(enabled, view) {
+        val window = view.context.findActivity()?.window
+        if (window != null) {
+            val controller = WindowCompat.getInsetsController(window, view)
+            if (enabled) {
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        onDispose { }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+

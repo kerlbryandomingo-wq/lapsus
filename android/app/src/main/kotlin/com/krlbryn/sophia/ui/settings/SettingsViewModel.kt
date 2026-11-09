@@ -12,6 +12,7 @@ import com.krlbryn.sophia.data.secure.SecretStore
 import com.krlbryn.sophia.data.settings.AccentColor
 import com.krlbryn.sophia.data.settings.AppSettings
 import com.krlbryn.sophia.data.settings.DownloadLocation
+import com.krlbryn.sophia.data.settings.PortalBookmark
 import com.krlbryn.sophia.data.settings.ResponseDetail
 import com.krlbryn.sophia.data.settings.SettingsRepository
 import com.krlbryn.sophia.data.settings.ThemeMode
@@ -82,6 +83,14 @@ class SettingsViewModel @Inject constructor(
 
     fun setHomepage(raw: String) = run {
         if (repo.setHomepage(raw)) say("Homepage saved") else say("Use an https:// address for the homepage.")
+    }
+
+    fun setPortalBookmark(bookmark: PortalBookmark, raw: String) = run {
+        if (repo.setPortalBookmark(bookmark, raw)) {
+            say(if (raw.isBlank()) "${bookmark.label} bookmark cleared" else "${bookmark.label} bookmark saved")
+        } else {
+            say("Use a secure https:// address.")
+        }
     }
 
     fun addExtraHost(raw: String) = run {
