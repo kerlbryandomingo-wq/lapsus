@@ -130,7 +130,7 @@ final class BrowserModel {
         self.settings = settings
         self.downloads = downloads
         self.fixtureHTML = fixtureHTML
-        webView = SophiaWebView(frame: .zero, configuration: Self.makeConfiguration())
+        webView = SophiaWebView(frame: .zero, configuration: Self.makeConfiguration(fixture: fixtureHTML != nil))
         let c = WebCoordinator(model: self, role: .main)
         coordinator = c
         webView.navigationDelegate = c
@@ -146,7 +146,7 @@ final class BrowserModel {
         observe()
     }
 
-    static func makeConfiguration() -> WKWebViewConfiguration {
+    static func makeConfiguration(fixture: Bool = false) -> WKWebViewConfiguration {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         config.allowsInlineMediaPlayback = true
@@ -156,6 +156,7 @@ final class BrowserModel {
         config.preferences.isFraudulentWebsiteWarningEnabled = true
         config.defaultWebpagePreferences.preferredContentMode = .recommended
         config.upgradeKnownHostsToHTTPS = true
+        if fixture { config.setURLSchemeHandler(FixtureSchemeHandler(), forURLScheme: FixturePage.scheme) }
         return config
     }
 
@@ -193,8 +194,8 @@ final class BrowserModel {
 
     func start() {
         guard webView.url == nil else { return }
-        if let fixtureHTML {
-            webView.loadHTMLString(fixtureHTML, baseURL: URL(string: "https://sophia.test/"))
+        if fixtureHTML != nil {
+            webView.load(URLRequest(url: FixturePage.startURL))
         } else {
             open(settings.homepage.isEmpty ? SophiaConstants.defaultPortalURL : settings.homepage)
         }

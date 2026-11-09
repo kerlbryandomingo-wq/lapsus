@@ -1,8 +1,13 @@
 import Foundation
+import WebKit
 
 /// A self-contained page for UI tests, so they never depend on the live portal or the network.
-/// Its buttons add history entries with pushState, which makes Back and Forward testable.
+/// It is served from a private URL scheme, page by page, so Back and Forward follow real navigations
+/// just as they do on the portal. Only UI-test launches register the scheme.
 enum FixturePage {
+    static let scheme = "sophia-fixture"
+    static let startURL = URL(string: "\(scheme)://sophia.test/page1")!
+
     static let html = """
     <!doctype html>
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -31,12 +36,27 @@ enum FixturePage {
         <div class="card"><p>More scroll content.</p></div>
       </main>
       <script>
-        let n = parseInt((location.pathname.match(/page(\\d+)/) || [0, 1])[1], 10);
-        function go() { n += 1; history.pushState({n}, "", "/page" + n); show(); }
-        function show() { document.getElementById("state").textContent = "Page " + n; document.title = "Sophia test page " + n; }
-        window.addEventListener("popstate", e => { n = (e.state && e.state.n) || 1; show(); });
-        if (n !== 1) show();
+        const n = parseInt((location.pathname.match(/page(\\d+)/) || [0, 1])[1], 10);
+        function go() { location.href = "/page" + (n + 1); }
+        document.getElementById("state").textContent = "Page " + n;
+        document.title = "Sophia test page " + n;
       </script>
     </body></html>
     """
+}
+
+/// Serves FixturePage for every path under sophia-fixture://sophia.test/.
+final class FixtureSchemeHandler: NSObject, WKURLSchemeHandler {
+    func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
+        let url = task.request.url ?? FixturePage.startURL
+        let data = Data(FixturePage.html.utf8)
+        let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
+                                       headerFields: ["Content-Type": "text/html; charset=utf-8",
+                                                      "Content-Length": String(data.count)])!
+        task.didReceive(response)
+        task.didReceive(data)
+        task.didFinish()
+    }
+
+    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
 }

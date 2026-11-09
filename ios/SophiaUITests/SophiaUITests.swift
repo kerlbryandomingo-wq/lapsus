@@ -92,9 +92,13 @@ final class SophiaUITests: XCTestCase {
         XCTAssertTrue(app.buttons["control_reload"].isEnabled)
         Screenshots.save(app, "3-right-panel")
 
-        // Swiping the panel back toward its edge closes it. The drag starts on the panel's empty lower part.
-        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.88))
-        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.995, dy: 0.88))
+        // Swiping the panel back toward its edge closes it. The drag runs across the panel's empty lower
+        // part, from its inner edge to the screen edge.
+        let panel = controlsPanel.frame
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let y = app.frame.height * 0.88
+        let from = origin.withOffset(CGVector(dx: panel.minX + 8, dy: y))
+        let to = origin.withOffset(CGVector(dx: app.frame.width - 2, dy: y))
         from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .fast, thenHoldForDuration: 0)
         XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5), "dragging the panel toward its edge closes it")
     }
