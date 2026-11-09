@@ -1,0 +1,159 @@
+name: Sophia for Android
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths: ["android/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: android
+
+jobs:
+  build:
+    name: Test, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests (core and app)
+        run: ./gradlew --stacktrace :core:test :app:testDebugUnitTest
+
+      - name: Lint
+        run: ./gradlew :app:lintDebug
+
+      - name: Debug APK
+        run: ./gradlew :app:assembleDebug
+
+      # Release signing uses repository secrets when they exist. Without them, a throwaway keystore is
+      # generated for this run only, so the APK installs for testing but must not be published.
+      - name: Prepare release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SOPHIA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.SOPHIA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SOPHIA_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SOPHIA_KEY_PASSWORD }}
+        run: |
+          ks="$RUNNER_TEMP/sophia-release.jks"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$ks"
+            {
+              echo "SOPHIA_KEYSTORE_FILE=$ks"
+              echo "SOPHIA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "SOPHIA_KEY_ALIAS=$KEY_ALIAS"
+              echo "SOPHIA_KEY_PASSWORD=$KEY_PASSWORD"
+              echo "SIGNING_LABEL=release-signed"
+            } >> "$GITHUB_ENV"
+          else
+            pass="$(openssl rand -hex 24)"
+            echo "::add-mask::$pass"
+            keytool -genkeypair -v -keystore "$ks" -storetype PKCS12 -alias ci -keyalg RSA -keysize 2048 \
+              -validity 30 -storepass "$pass" -keypass "$pass" -dname "CN=Sophia CI test key" >/dev/null 2>&1
+            {
+              echo "SOPHIA_KEYSTORE_FILE=$ks"
+              echo "SOPHIA_KEYSTORE_PASSWORD=$pass"
+              echo "SOPHIA_KEY_ALIAS=ci"
+              echo "SOPHIA_KEY_PASSWORD=$pass"
+              echo "SIGNING_LABEL=test-signed"
+            } >> "$GITHUB_ENV"
+            echo "::notice::No release signing secrets are set, so this build is signed with a temporary test key."
+          fi
+
+      - name: Release APK and App Bundle (R8)
+        run: ./gradlew :app:assembleRelease :app:bundleRelease
+
+      - name: Collect outputs
+        run: |
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          version="$(grep -oP 'sophia.versionName=\K.*' gradle.properties || echo 0.1.0)"
+          cp app/build/outputs/apk/debug/app-debug.apk "$out/Sophia-$version-debug.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$out/Sophia-$version-release-$SIGNING_LABEL.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "$out/Sophia-$version-release-$SIGNING_LABEL.aab"
+          cp app/build/outputs/mapping/release/mapping.txt "$out/Sophia-$version-mapping.txt"
+          rm -f "$RUNNER_TEMP/sophia-release.jks"
+          ls -la "$out"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sophia-android
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sophia-reports
+          path: |
+            android/app/build/reports
+            android/core/build/reports
+          if-no-files-found: ignore
+
+  instrumented:
+    name: UI tests on ${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: pixel_6
+          - profile: pixel_tablet
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build test APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          working-directory: android
+          script: ./gradlew :app:connectedDebugAndroidTest
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sophia-ui-tests-${{ matrix.profile }}
+          path: android/app/build/reports/androidTests
+          if-no-files-found: ignore
