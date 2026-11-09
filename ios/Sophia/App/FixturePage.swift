@@ -31,10 +31,11 @@ enum FixturePage {
         <div class="card"><p>More scroll content.</p></div>
       </main>
       <script>
-        let n = 1;
+        let n = parseInt((location.pathname.match(/page(\\d+)/) || [0, 1])[1], 10);
         function go() { n += 1; history.pushState({n}, "", "/page" + n); show(); }
         function show() { document.getElementById("state").textContent = "Page " + n; document.title = "Sophia test page " + n; }
         window.addEventListener("popstate", e => { n = (e.state && e.state.n) || 1; show(); });
+        if (n !== 1) show();
       </script>
     </body></html>
     """

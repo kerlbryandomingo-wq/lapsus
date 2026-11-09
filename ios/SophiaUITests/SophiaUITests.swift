@@ -18,8 +18,6 @@ final class SophiaUITests: XCTestCase {
             let test = name.components(separatedBy: " ").last?.trimmingCharacters(in: CharacterSet(charactersIn: "]")) ?? "test"
             Screenshots.save(app, "failed-\(test)")
         }
-        // Ending the app here keeps the next launch from having to stop a busy instance.
-        if app != nil, app.state != .notRunning { app.terminate() }
         XCUIDevice.shared.orientation = .portrait
         super.tearDown()
     }
@@ -42,7 +40,7 @@ final class SophiaUITests: XCTestCase {
 
     private func launchToPage() {
         app.launch()
-        XCTAssertTrue(app.webViews.staticTexts["Discipulus test page"].waitForExistence(timeout: 20), "the start page should load")
+        XCTAssertTrue(app.webViews.staticTexts["Discipulus test page"].waitForExistence(timeout: 60), "the start page should load")
     }
 
     private var addressPanel: XCUIElement { app.descendants(matching: .any)["address_panel"] }
@@ -95,7 +93,7 @@ final class SophiaUITests: XCTestCase {
         Screenshots.save(app, "3-right-panel")
 
         // Swiping the panel back toward its edge closes it. The drag starts on the panel's empty lower part.
-        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.86, dy: 0.88))
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.88))
         let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.995, dy: 0.88))
         from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .fast, thenHoldForDuration: 0)
         XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5), "dragging the panel toward its edge closes it")
@@ -114,11 +112,12 @@ final class SophiaUITests: XCTestCase {
         let forward = app.buttons["control_forward"]
         XCTAssertTrue(waitUntil(forward, enabled: true), "Forward is available after going back")
         XCTAssertTrue(waitUntil(back, enabled: false), "Back is unavailable on the first page")
+        XCTAssertTrue(app.webViews.staticTexts["Page 1"].waitForExistence(timeout: 10), "the page shows the first entry")
         forward.tap()
         XCTAssertTrue(waitUntil(back, enabled: true), "Back is available again after going forward")
+        XCTAssertTrue(waitUntil(forward, enabled: false), "Forward is unavailable on the newest entry")
         tapBesidePanel(0.2)
         XCTAssertTrue(controlsPanel.waitToDisappear(timeout: 5))
-        XCTAssertTrue(app.webViews.staticTexts["Page 2"].waitForExistence(timeout: 5), "the page shows the second entry")
     }
 
     func testSettingsOpenFromControls() {

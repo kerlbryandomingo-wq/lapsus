@@ -95,7 +95,7 @@ jobs:
           for id in $SIM_UI; do dests+=(-destination "id=$id"); done
           xcodebuild test-without-building -project Sophia.xcodeproj -scheme Sophia \
             "${dests[@]}" -derivedDataPath "$RUNNER_TEMP/dd" -only-testing:SophiaUITests \
-            -maximum-concurrent-test-simulator-destinations 2 \
+            -maximum-concurrent-test-simulator-destinations 1 \
             -resultBundlePath "$RUNNER_TEMP/ui.xcresult" 2>&1 | tee "$RUNNER_TEMP/ui.log" | grep -E "Test Case|error:|Executed|TEST" | tail -120 \
             || { grep -E "error:|failed|XCTAssert|Fatal error|crash|Restarting|signal" "$RUNNER_TEMP/ui.log" | head -150; exit 1; }
 
