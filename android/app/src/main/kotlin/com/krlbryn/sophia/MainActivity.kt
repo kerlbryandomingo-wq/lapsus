@@ -92,10 +92,8 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Keyboard shortcuts for tablets and Chromebooks with a hardware keyboard. */
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && handleShortcut(event)) return true
-        return super.dispatchKeyEvent(event)
-    }
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
+        handleShortcut(event) || super.onKeyDown(keyCode, event)
 
     private fun handleShortcut(e: KeyEvent): Boolean {
         val ctrl = e.isCtrlPressed && !e.isAltPressed

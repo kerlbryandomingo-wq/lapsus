@@ -2,7 +2,7 @@ name: Sophia for Android
 
 on:
   push:
-    branches: [main, "feature/**"]
+    branches: [main]
     paths: ["android/**", ".github/workflows/android.yml"]
   pull_request:
     paths: ["android/**", ".github/workflows/android.yml"]
@@ -44,6 +44,10 @@ jobs:
 
       - name: Lint
         run: ./gradlew :app:lintDebug
+
+      - name: Show lint findings
+        if: failure()
+        run: cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt || true
 
       - name: Debug APK
         run: ./gradlew :app:assembleDebug
