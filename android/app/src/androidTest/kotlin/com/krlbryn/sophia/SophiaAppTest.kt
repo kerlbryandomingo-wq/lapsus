@@ -1,6 +1,13 @@
 package com.krlbryn.sophia
 
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.os.Build
+import android.provider.MediaStore
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.click
@@ -55,6 +62,25 @@ class SophiaAppTest {
         compose.onAllNodes(hasTestTag("webview") or hasTestTag("error_page")).fetchSemanticsNodes().isNotEmpty()
     }
 
+    /** Lets the page finish loading (up to 10 s) so screenshots show it, then saves one for review. */
+    private fun snapshot(name: String) {
+        runCatching { compose.waitUntil(10_000) { compose.onAllNodes(hasTestTag("page_progress")).fetchSemanticsNodes().isEmpty() } }
+        compose.waitForIdle()
+        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        // Saved to Download/sophia-screens through MediaStore so it survives the test app's uninstall.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = compose.activity.contentResolver
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "$name.png")
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/sophia-screens")
+            }
+            resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                resolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }
+        }
+    }
+
     private fun openSettingsFromBrowser() {
         awaitPage()
         swipeFromRightEdge()
@@ -74,6 +100,7 @@ class SophiaAppTest {
         compose.onNodeWithTag("bottom_nav").assertDoesNotExist()
         compose.onNodeWithTag("nav_rail").assertDoesNotExist()
         compose.onNodeWithTag("nav_drawer").assertDoesNotExist()
+        snapshot("1-normal")
     }
 
     // Test B: left panel.
@@ -87,6 +114,7 @@ class SophiaAppTest {
         compose.onNodeWithTag("panel_bookmark_discipulus").assertExists()
         compose.onNodeWithTag("panel_bookmark_lms").assertExists()
         compose.onNodeWithTag("panel_bookmark_aurora").assertExists()
+        snapshot("2-left-panel")
 
         // LMS has no address yet, so Sophia asks for one instead of guessing.
         compose.onNodeWithTag("panel_bookmark_lms").performClick()
@@ -110,6 +138,7 @@ class SophiaAppTest {
         listOf("Back", "Forward", "Reload", "Settings").forEach { label ->
             compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("nav_controls"))).assertExists()
         }
+        snapshot("3-right-panel")
         // Swiping the panel back toward its edge closes it.
         compose.onNodeWithTag("controls_scrim").performTouchInput { swipeRight(startX = left + 20f, endX = left + width * 0.6f, durationMillis = 200) }
         compose.waitForIdle()

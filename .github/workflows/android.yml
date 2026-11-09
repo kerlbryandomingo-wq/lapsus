@@ -136,6 +136,8 @@ jobs:
   instrumented:
     name: UI tests on ${{ matrix.profile }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # only used to publish screenshots to a sophia-screens-* branch
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -176,7 +178,24 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           working-directory: android
-          script: ./gradlew :app:connectedDebugAndroidTest
+          script: |
+            adb shell rm -rf /sdcard/Download/sophia-screens || true
+            ./gradlew :app:connectedDebugAndroidTest; status=$?; adb pull /sdcard/Download/sophia-screens "$RUNNER_TEMP/screens" || true; exit $status
+
+      # Screenshots of the three browser states, on a single-commit branch per device, for design review.
+      - name: Publish screenshots
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          [ -d screens ] || exit 0
+          cd screens
+          git init -q -b "sophia-screens-${{ matrix.profile }}"
+          git add -f ./*.png
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "Screenshots on ${{ matrix.profile }} from ${{ github.event.pull_request.head.sha }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "sophia-screens-${{ matrix.profile }}"
 
       - uses: actions/upload-artifact@v4
         if: always()
